@@ -1,0 +1,34 @@
+#!/usr/bin/env python
+import os
+import sys
+
+# Virtual environment'ı aktif et (cPanel için)
+# cPanel'de Python virtual env path'ini buraya ekleyeceksin
+# örnek: sys.path.insert(0, "/home/username/virtualenv/myproject/3.11/lib/python3.11/site-packages")
+
+# Proje root'u path'e ekle
+sys.path.insert(0, os.path.dirname(__file__))
+
+# Django settings modülünü belirt
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+
+# Django WSGI application'ı import et
+from django.core.wsgi import get_wsgi_application
+application = get_wsgi_application()
+
+# cPanel için uyumluluk
+def application(environ, start_response):
+    # Environment variables'ı set et
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+    
+    # Static/Media dosyaları için path ayarla
+    if environ['PATH_INFO'].startswith('/static/'):
+        # Static dosyalar web server tarafından serve edilmeli
+        pass
+    elif environ['PATH_INFO'].startswith('/media/'):
+        # Media dosyalar web server tarafından serve edilmeli  
+        pass
+    
+    # Django WSGI app'i çalıştır
+    _application = get_wsgi_application()
+    return _application(environ, start_response)

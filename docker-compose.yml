@@ -1,0 +1,116 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bp_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bp_db}
+      POSTGRES_USER: ${POSTGRES_USER:-bp_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bp_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Redis Cache & Celery Broker
+  redis:
+    image: redis:7-alpine
+    container_name: bp_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # Django Backend
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_backend
+    command: gunicorn --bind 0.0.0.0:8000 config.wsgi:application --workers=3
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  # Celery Worker
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_celery
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+
+  # Celery Beat (Zamanlanmış görevler)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_celery_beat
+    command: celery -A config beat -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: bp_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_volume:/static
+      - media_volume:/media
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:
+
+networks:
+  default:
+    name: bp_network
