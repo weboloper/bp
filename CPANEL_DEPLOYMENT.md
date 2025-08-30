@@ -2,9 +2,27 @@
 
 Bu proje hem Docker (VPS) hem de cPanel (shared hosting) ile uyumlu.
 
-## 🔄 cPanel'e Deploy Etmek için:
+## 🚀 cPanel'e Hızlı Kurulum
 
-### 1. Dosya Yapısı (cPanel)
+### 1. Projeyi Klonla (cPanel File Manager veya SSH)
+```bash
+# SSH ile (varsa):
+cd ~/domains/yourdomain.com  # veya istediğin dizin
+git clone https://github.com/weboloper/bp.git
+cd bp
+
+# Eğer zaten passenger_wsgi.py varsa sil (çakışmasın diye):
+rm -f passenger_wsgi.py
+
+# Git repository'i hazırla:
+git init
+git remote add origin https://github.com/weboloper/bp
+git pull origin main
+```
+
+**Not:** SSH yoksa File Manager'dan manuel upload edebilirsin.
+
+### 2. Dosya Yapısı (cPanel)
 ```
 public_html/
 ├── passenger_wsgi.py        # Ana dizinde (WSGI entry point)
@@ -17,26 +35,33 @@ public_html/
 └── media/                   # Upload edilecek dosyalar
 ```
 
-### 2. passenger_wsgi.py Mantığı
+### 3. passenger_wsgi.py Mantığı
 Mevcut `passenger_wsgi.py` akıllıca şu işleri yapıyor:
 - Backend klasörünü Python path'e ekler
 - Working directory'yi backend'e değiştirir (.env dosyası için)
 - Django WSGI application'ı import eder
 
-### 3. Python App Oluştur (cPanel)
+### 4. Python App Oluştur (cPanel)
 - Python Selector'dan yeni app oluştur
 - Python 3.11+ seç
 - Domain/subdomain belirle
 - App directory'yi public_html olarak ayarla
 
-### 4. Dependencies Yükle
+### 5. Dependencies Yükle
 ```bash
 cd ~/public_html/backend
 pip install -r requirements.txt
 ```
 
-### 5. Environment Setup (.env)
-backend/.env dosyası oluştur:
+### 6. Environment Setup (.env)
+**.env dosyasını ana dizine kopyala:**
+```bash
+# Proje ana dizininde:
+cp .env.example .env
+# .env dosyasını düzenle
+```
+
+**İçerik:**
 ```
 DEBUG=False
 SECRET_KEY=your-very-strong-secret-key-here
@@ -46,7 +71,15 @@ DATABASE_URL=mysql://cpanel_user:password@localhost/cpanel_database
 # DATABASE_URL=mysql://username_dbuser:password@localhost/username_dbname
 ```
 
-### 6. Database Setup (cPanel MySQL)
+**Dosya yapısı:**
+```
+project-root/
+├── .env              # Ana dizinde - hem Docker hem cPanel
+├── passenger_wsgi.py
+└── backend/
+```
+
+### 7. Database Setup (cPanel MySQL)
 - cPanel'de MySQL database oluştur
 - User oluştur ve database'e assign et
 - Requirements.txt'e mysqlclient ekle:
@@ -55,7 +88,7 @@ DATABASE_URL=mysql://cpanel_user:password@localhost/cpanel_database
 mysqlclient==2.1.1
 ```
 
-### 7. Django Commands
+### 8. Django Commands
 ```bash
 cd ~/public_html/backend
 python manage.py migrate
@@ -63,20 +96,31 @@ python manage.py collectstatic
 python manage.py createsuperuser
 ```
 
-### 8. Static Files (cPanel)
-.htaccess ile static dosyaları serve et:
-```apache
-# public_html/.htaccess
-RewriteEngine On
+### 9. Static Files Setup
 
-# Static files
-RewriteRule ^static/(.*)$ /static/$1 [L]
-RewriteRule ^media/(.*)$ /media/$1 [L]
+**Basit yaklaşım - her yerde aynı:**
+```bash
+cd ~/your-project-path/backend
+python manage.py collectstatic --noinput
+```
 
-# Django app
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ passenger_wsgi.py/$1 [QSA,L]
+**Static files şu yapıda toplanır:**
+```
+backend/
+├── staticfiles/           # collectstatic buraya toplar
+├── media/                 # Upload folder
+└── config/
+```
+
+**Web server konfigürasyonu:**
+- **cPanel**: Static files'ları `/staticfiles/` klasöründen serve et
+- **Docker**: Nginx volume ile `/static/` altında serve eder
+
+**htaccess örneği (isteğe bağlı):**
+```bash
+# Proje ana dizininde:
+cp htaccess.cpanel.example .htaccess
+# Kendi path'lerine göre düzenle
 ```
 
 ## 🚀 Geçiş Stratejileri

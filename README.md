@@ -19,12 +19,14 @@ bp/
 ## 🚀 Hızlı Başlangıç
 
 ### 1. Projeyi klonla
+
 ```bash
-git clone <repo-url>
+git clone https://github.com/weboloper/bp.git
 cd bp
 ```
 
 ### 2. Environment dosyasını düzenle
+
 ```bash
 cp .env.example .env
 # .env dosyasındaki değerleri düzenle
@@ -32,6 +34,7 @@ cp .env.example .env
 ```
 
 ### 3. Sadece Backend (Django)
+
 ```bash
 make up          # Servisleri başlat
 make migrate     # Database migration
@@ -39,6 +42,7 @@ make createsuperuser  # Admin kullanıcısı oluştur
 ```
 
 ### 4. Backend + Frontend (Django + Next.js)
+
 ```bash
 make up-frontend  # Frontend ile beraber başlat
 ```
@@ -77,6 +81,7 @@ make createsuperuser # Superuser oluştur
 ## 🔒 SSL Kurulumu
 
 ### Development (Self-signed)
+
 ```bash
 # nginx/ssl klasöründe
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
@@ -84,6 +89,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 ```
 
 ### Production (Let's Encrypt)
+
 ```bash
 # .env dosyasında DOMAIN ve SSL_EMAIL'i ayarla
 make ssl-init
@@ -92,6 +98,7 @@ make ssl-init
 ## 📝 Development
 
 ### Django Uygulaması Ekleme
+
 ```bash
 make shell
 cd /app
@@ -99,7 +106,9 @@ python manage.py startapp myapp
 ```
 
 ### Frontend Geliştirme
+
 Frontend klasörüne Next.js kurmak için:
+
 ```bash
 cd frontend
 npx create-next-app@latest . --typescript --tailwind --eslint
@@ -108,6 +117,7 @@ npx create-next-app@latest . --typescript --tailwind --eslint
 ## 🚀 Production Deployment
 
 ### VPS'e Deploy
+
 1. `.env` dosyasında `DEBUG=False` yap
 2. `SECRET_KEY` değiştir
 3. Domain adını ayarla
@@ -115,7 +125,9 @@ npx create-next-app@latest . --typescript --tailwind --eslint
 5. `make prod-up` ile başlat
 
 ### cPanel'den VPS'e Geçiş
+
 Bu Docker yapısı sayesinde:
+
 1. Kod değişikliği yapmadan
 2. `git clone` + `make up` ile çalışır
 3. Veritabanı backup/restore ile veri taşınır
@@ -123,6 +135,7 @@ Bu Docker yapısı sayesinde:
 ## 🔍 Troubleshooting
 
 ### Yaygın Sorunlar
+
 ```bash
 # Port zaten kullanımda
 make down && make up
@@ -135,6 +148,7 @@ make shell-db  # PostgreSQL bağlantısını test et
 ```
 
 ### Logları İncele
+
 ```bash
 make logs           # Tüm servis logları
 make logs-backend   # Sadece Django logları

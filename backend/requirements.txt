@@ -4,7 +4,7 @@ djangorestframework==3.16.0
 django-cors-headers==4.7.0
 
 # Database
-psycopg2-binary==2.9.7
+psycopg2-binary==2.9.10
 dj-database-url==2.1.0
 
 # MySQL support (cPanel için opsiyonel)
@@ -27,7 +27,7 @@ django-environ==0.12.0
 djangorestframework_simplejwt==5.5.0
 
 # File Upload & Storage
-Pillow==10.0.1
+pillow==11.2.1
 
 # Development
 django-debug-toolbar==4.2.0
