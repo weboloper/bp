@@ -24,27 +24,76 @@ env = environ.Env(
     DATABASE_URL=(str, ''),
 )
 
-# Read .env file
-try:
-    environ.Env.read_env(BASE_DIR / '.env')
-except:
-    # Fallback for cPanel deployment
-    try:
-        environ.Env.read_env(BASE_DIR.parent / '.env')
-    except:
-        pass
+# Environment setup - Docker vs cPanel with multi-env support
+# print(f"BASE_DIR: {BASE_DIR}")
+# print(f"Raw env DEBUG: {os.environ.get('DEBUG', 'NOT_SET')}")
+
+# İlk olarak environment variables'lara bak (Docker)
+if 'DEBUG' in os.environ:
+    # print("Using environment variables (Docker mode)")
+    pass
+else:
+    # .env dosyasını dene (cPanel mode)
+    # Ortam tipini belirle
+    env_type = os.environ.get('DJANGO_ENV', 'development')  # development, staging, production
+    
+    # Ortama göre doğru .env dosyasını seç
+    if env_type == 'staging':
+        env_file = '.env.staging'
+    elif env_type == 'production':
+        env_file = '.env.prod'
+    else:
+        env_file = '.env'  # development
+    
+    # .env dosyasını ara (parent directory'den başla)
+    parent_env_path = BASE_DIR.parent / env_file
+    backend_env_path = BASE_DIR / env_file
+    
+    # print(f"Looking for env file: {env_file}")
+    # print(f"Parent .env path: {parent_env_path}")
+    # print(f"Backend .env path: {backend_env_path}")
+    
+    if parent_env_path.exists():
+        environ.Env.read_env(parent_env_path)
+        # print(f"{env_file} loaded from parent directory (cPanel mode)")
+    elif backend_env_path.exists():
+        environ.Env.read_env(backend_env_path)
+        # print(f"{env_file} loaded from backend directory (cPanel mode)")
+    else:
+        # Fallback to .env if specific env file not found
+        fallback_parent = BASE_DIR.parent / '.env'
+        fallback_backend = BASE_DIR / '.env'
+        
+        if fallback_parent.exists():
+            environ.Env.read_env(fallback_parent)
+            # print("Fallback: .env loaded from parent directory")
+        elif fallback_backend.exists():
+            environ.Env.read_env(fallback_backend)
+            # print("Fallback: .env loaded from backend directory")
+        else:
+            pass
+            # print("No .env file found - using defaults")
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
+# print(f"Final DEBUG value: {DEBUG}")
+# print(f"DEBUG type: {type(DEBUG)}")
 
-ALLOWED_HOSTS = ['*'] if DEBUG else [
-    'localhost',
-    '127.0.0.1',
-    env('DOMAIN', default='localhost'),
-]
+# ALLOWED_HOSTS configuration
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    # Production/Staging - sadece belirli host'lara izin ver
+    allowed_hosts_str = env('ALLOWED_HOSTS', default='localhost,127.0.0.1')
+    ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',')]
+    
+    # Domain varsa ekle
+    domain = env('DOMAIN', default='')
+    if domain and domain not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(domain)
 
 # Application definition
 INSTALLED_APPS = [
@@ -137,8 +186,6 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-# Simple approach - works for both Docker and cPanel
-
 STATIC_URL = '/static/'
 
 # Static files directories (your app's static files)
@@ -173,8 +220,8 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in development
 if not DEBUG:
     CORS_ALLOWED_ORIGINS = [
-        "https://yourdomain.com",
-        "https://www.yourdomain.com",
+        f"https://{env('DOMAIN', default='yourdomain.com')}",
+        f"https://www.{env('DOMAIN', default='yourdomain.com')}",
     ]
 
 # Celery Configuration (only works in Docker, not cPanel)
@@ -218,3 +265,19 @@ if not DEBUG:
     # SECURE_SSL_REDIRECT = True
     # SESSION_COOKIE_SECURE = True
     # CSRF_COOKIE_SECURE = True
+
+# Environment-specific settings
+CURRENT_ENV = env('DJANGO_ENV', default='development')
+
+if CURRENT_ENV == 'staging':
+    # Staging specific settings
+    print("Running in STAGING mode")
+    pass
+elif CURRENT_ENV == 'production':
+    # Production specific settings  
+    print("Running in PRODUCTION mode")
+    pass
+else:
+    # Development specific settings
+    print("Running in DEVELOPMENT mode")
+    pass

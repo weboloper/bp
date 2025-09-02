@@ -34,7 +34,7 @@ services:
     command: gunicorn --bind 0.0.0.0:8000 config.wsgi:application --workers=3
     volumes:
       - ./backend:/app
-      - static_volume:/app/static
+      - static_volume:/app/staticfiles
       - media_volume:/app/media
     ports:
       - "8000:8000"
@@ -101,6 +101,8 @@ services:
       - static_volume:/static
       - media_volume:/media
       - ./nginx/ssl:/etc/nginx/ssl
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
     depends_on:
       - backend
     restart: unless-stopped

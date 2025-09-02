@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (Staging)
+  postgres:
+    image: postgres:15-alpine
+    container_name: bp_postgres_staging
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bp_staging_db}
+      POSTGRES_USER: ${POSTGRES_USER:-bp_staging_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bp_staging_pass}
+    volumes:
+      - postgres_staging_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # Farklı port (production ile çakışmasın)
+    restart: unless-stopped
+
+  # Redis Cache & Celery Broker (Staging)
+  redis:
+    image: redis:7-alpine
+    container_name: bp_redis_staging
+    ports:
+      - "6380:6379"  # Farklı port
+    volumes:
+      - redis_staging_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Django Backend (Staging)
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_backend_staging
+    command: gunicorn --bind 0.0.0.0:8000 config.wsgi:application --workers=2 --timeout=60 --reload
+    volumes:
+      - ./backend:/app
+      - static_staging_volume:/app/static
+      - media_staging_volume:/app/media
+    ports:
+      - "8001:8000"  # Farklı port
+    environment:
+      - DEBUG=${DEBUG:-True}  # Staging'de debug aktif
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.yourdomain.com}
+      - DOMAIN=${DOMAIN:-staging.yourdomain.com}
+      - DJANGO_ENV=staging
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker (Staging)
+  celery:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_celery_staging
+    command: celery -A config worker -l info --concurrency=1
+    volumes:
+      - ./backend:/app
+      - media_staging_volume:/app/media
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.yourdomain.com}
+      - DJANGO_ENV=staging
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "celery", "-A", "config", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Beat (Staging)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_celery_beat_staging
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.yourdomain.com}
+      - DJANGO_ENV=staging
+    depends_on:
+      - postgres
+      - redis
+      - backend
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy (Staging)
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: bp_nginx_staging
+    ports:
+      - "8080:80"   # HTTP port (farklı)
+      - "8443:443"  # HTTPS port (farklı)
+    volumes:
+      - static_staging_volume:/static
+      - media_staging_volume:/media
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/ssl/www:/var/www/certbot
+    environment:
+      - DOMAIN=${DOMAIN:-staging.yourdomain.com}
+    depends_on:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SSL Certificate Auto-Renewal Container (Staging)
+  certbot-staging:
+    image: certbot/certbot:latest
+    container_name: bp_certbot_staging
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - ./nginx/ssl/www:/var/www/certbot
+    environment:
+      - SSL_EMAIL=${SSL_EMAIL}
+      - DOMAIN=${DOMAIN:-staging.yourdomain.com}
+    command: >
+      sh -c "
+      # İlk sertifika kontrolü (staging certificate)
+      if [ ! -d '/etc/letsencrypt/live/${DOMAIN}' ]; then
+        echo '🔒 Staging SSL sertifikası alınıyor (test sertifikası)...';
+        certbot certonly --webroot --webroot-path=/var/www/certbot --staging --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} --non-interactive;
+        if [ $? -eq 0 ]; then
+          echo '✅ Staging SSL sertifikası başarıyla alındı! (Test sertifikası)';
+          echo '⚠️ Not: Bu test sertifikasıdır, browser güvenlik uyarısı verebilir.';
+        else
+          echo '❌ Staging SSL sertifikası alınamadı!';
+          exit 1;
+        fi;
+      fi;
+      
+      # Sürekli yenileme döngüsü  
+      while :; do
+        echo '🔍 SSL sertifikaları kontrol ediliyor... ($(date))';
+        certbot renew --webroot --webroot-path=/var/www/certbot --quiet --no-self-upgrade;
+        
+        if [ $? -eq 0 ]; then
+          echo '✅ SSL kontrol/yenileme başarılı, Nginx yeniden yükleniyor...';
+          docker exec bp_nginx_staging nginx -s reload 2>/dev/null || echo '⚠️ Nginx reload hatası';
+        else
+          echo '❌ SSL yenileme hatası!';
+        fi;
+        
+        echo '⏰ SSL kontrol tamamlandı. 12 saat bekleniyor...';
+        sleep 12h;
+      done"
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    networks:
+      - bp_staging_network
+    healthcheck:
+      test: ["CMD", "certbot", "certificates"]
+      interval: 12h
+      timeout: 30s
+      retries: 3
+
+volumes:
+  postgres_staging_data:
+    driver: local
+  redis_staging_data:
+    driver: local
+  static_staging_volume:
+    driver: local
+  media_staging_volume:
+    driver: local
+
+networks:
+  default:
+    name: bp_staging_network
+    driver: bridge
