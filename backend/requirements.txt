@@ -16,9 +16,11 @@ django-redis==5.4.0
 celery==5.3.4
 django-celery-beat==2.8.0
 django_celery_results==2.6.0
+flower==2.0.1
 
 # Server
 gunicorn==21.2.0
+whitenoise==6.8.0
 
 # Environment
 django-environ==0.12.0
@@ -28,12 +30,14 @@ djangorestframework_simplejwt==5.5.0
 
 # File Upload & Storage
 pillow==11.2.1
+django-storages==1.14.2
 
 # Development
 django-debug-toolbar==4.2.0
 
 # Security
 django-ratelimit==4.1.0
+sentry-sdk[django]==2.15.0
 
 # Admin & Forms
 django-crispy-forms==2.0

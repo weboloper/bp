@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database (Optional - use if not using managed DB)
+  postgres:
+    image: postgres:15-alpine
+    container_name: bp_postgres_prod
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bp_prod_db}
+      POSTGRES_USER: ${POSTGRES_USER:-bp_prod_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bp_prod_secure_password}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - bp_network
+    # Only start if DATABASE_URL points to container
+    profiles:
+      - postgres
+
   # Redis Cache & Celery Broker
   redis:
     image: redis:7-alpine
@@ -164,7 +183,31 @@ services:
       timeout: 30s
       retries: 3
 
+  # Flower for Celery Monitoring (Production)
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_flower_prod
+    command: celery -A config flower --port=5555 --basic_auth=admin:${FLOWER_PASSWORD:-secure123}
+    ports:
+      - "5555:5555"
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ENV=production
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - bp_network
+    restart: unless-stopped
+
 volumes:
+  postgres_prod_data:
+    driver: local
   redis_data:
     driver: local
   static_volume:

@@ -117,13 +117,23 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+]
+
+# Static Files Handler Strategy
+STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='nginx')
+
+# WhiteNoise middleware'i sadece whitenoise handler için ekle
+if STATIC_FILES_HANDLER == 'whitenoise':
+    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
+
+MIDDLEWARE.extend([
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-]
+])
 
 ROOT_URLCONF = 'config.urls'
 
@@ -195,6 +205,57 @@ if (BASE_DIR / 'static').exists():
 
 # Static root - where collectstatic puts files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Static Files Strategy Configuration
+STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='nginx')
+
+if STATIC_FILES_HANDLER == 'whitenoise':
+    # WhiteNoise Configuration (cPanel için)
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    
+    # WhiteNoise ayarları
+    WHITENOISE_USE_FINDERS = True
+    WHITENOISE_AUTOREFRESH = DEBUG
+    WHITENOISE_MAX_AGE = 86400  # 1 day cache
+    
+    # Compression settings
+    if not DEBUG:
+        WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
+        WHITENOISE_MIMETYPES = {
+            '.js': 'application/javascript',
+            '.css': 'text/css',
+        }
+
+elif STATIC_FILES_HANDLER == 's3':
+    # AWS S3 Configuration
+    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'  # Media files
+    
+    AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='us-east-1')
+    
+    # CloudFront domain (opsiyonel)
+    AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', default=None)
+    if AWS_S3_CUSTOM_DOMAIN:
+        AWS_S3_URL_PROTOCOL = 'https:'
+        STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    else:
+        STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/'
+        MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/'
+    
+    AWS_DEFAULT_ACL = env('AWS_DEFAULT_ACL', default='public-read')
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': env('AWS_S3_OBJECT_PARAMETERS_CacheControl', default='max-age=86400'),
+    }
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = False
+
+else:
+    # Default: Nginx/Apache serve eder (VPS için)
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Media files (uploads)
 MEDIA_URL = '/media/'
@@ -268,6 +329,27 @@ if not DEBUG:
 
 # Environment-specific settings
 CURRENT_ENV = env('DJANGO_ENV', default='development')
+
+# Sentry Configuration
+SENTRY_DSN = env('SENTRY_DSN', default=None)
+if SENTRY_DSN and not DEBUG:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+    
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(auto_enabling=True),
+            CeleryIntegration(auto_enabling=True),
+            RedisIntegration(),
+        ],
+        traces_sample_rate=0.1,
+        send_default_pii=True,
+        environment=CURRENT_ENV,
+        release=env('APP_VERSION', default='1.0.0'),
+    )
 
 if CURRENT_ENV == 'staging':
     # Staging specific settings

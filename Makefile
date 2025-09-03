@@ -18,8 +18,11 @@ down: ## Tüm servisleri durdur
 build-prod: ## Production için Docker imajlarını oluştur
 	docker-compose -f docker-compose.prod.yml build
 
-up-prod: ## Production servilerini çalıştır (external DB)
+up-prod: ## Production servilerini çalıştır (external DB default, --profile postgres for container DB)
 	docker-compose -f docker-compose.prod.yml up -d
+
+up-prod-postgres: ## Production servilerini PostgreSQL container ile çalıştır
+	docker-compose -f docker-compose.prod.yml --profile postgres up -d
 
 down-prod: ## Production servilerini durdur
 	docker-compose -f docker-compose.prod.yml down

@@ -183,6 +183,46 @@ services:
       timeout: 30s
       retries: 3
 
+  # pgAdmin for Staging Database Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: bp_pgadmin_staging
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@staging.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-staging123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin_staging_data:/var/lib/pgadmin
+    ports:
+      - "5051:80"
+    depends_on:
+      - postgres
+    networks:
+      - bp_staging_network
+    restart: unless-stopped
+
+  # Flower for Celery Monitoring (Staging)
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bp_flower_staging
+    command: celery -A config flower --port=5555
+    ports:
+      - "5556:5555"
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
+      - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ENV=staging
+    depends_on:
+      - redis
+      - backend
+    networks:
+      - bp_staging_network
+    restart: unless-stopped
+
 volumes:
   postgres_staging_data:
     driver: local
@@ -191,6 +231,8 @@ volumes:
   static_staging_volume:
     driver: local
   media_staging_volume:
+    driver: local
+  pgadmin_staging_data:
     driver: local
 
 networks:
