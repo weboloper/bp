@@ -1,6 +1,4 @@
 # Staging environment için .env.staging dosyasını kullan
-env_file:
-  - .env.staging
 
 services:
   # PostgreSQL Database (Staging)

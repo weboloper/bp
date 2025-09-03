@@ -1,6 +1,4 @@
 # Production environment için .env.prod dosyasını kullan
-env_file:
-  - .env.prod
 
 services:
   # PostgreSQL Database (Optional - use if not using managed DB)

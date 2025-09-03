@@ -1,6 +1,4 @@
 # Development environment için .env dosyasını kullan
-env_file:
-  - .env
 
 services:
   # PostgreSQL Database
