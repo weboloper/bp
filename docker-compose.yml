@@ -1,4 +1,6 @@
-version: '3.8'
+# Development environment için .env dosyasını kullan
+env_file:
+  - .env
 
 services:
   # PostgreSQL Database
@@ -32,6 +34,8 @@ services:
       dockerfile: Dockerfile
     container_name: bp_backend
     command: gunicorn --bind 0.0.0.0:8000 config.wsgi:application --workers=3
+    env_file:
+      - .env
     volumes:
       - ./backend:/app
       - static_volume:/app/staticfiles
@@ -39,10 +43,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=${DEBUG:-False}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
       - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ENV=development
     depends_on:
       - postgres
       - redis
@@ -55,13 +58,14 @@ services:
       dockerfile: Dockerfile
     container_name: bp_celery
     command: celery -A config worker -l info
+    env_file:
+      - .env
     volumes:
       - ./backend:/app
     environment:
-      - DEBUG=${DEBUG:-False}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
       - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ENV=development
     depends_on:
       - postgres
       - redis
@@ -75,13 +79,14 @@ services:
       dockerfile: Dockerfile
     container_name: bp_celery_beat
     command: celery -A config beat -l info
+    env_file:
+      - .env
     volumes:
       - ./backend:/app
     environment:
-      - DEBUG=${DEBUG:-False}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
       - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ENV=development
     depends_on:
       - postgres
       - redis
@@ -130,13 +135,14 @@ services:
       dockerfile: Dockerfile
     container_name: bp_flower
     command: celery -A config flower --port=5555
+    env_file:
+      - .env
     ports:
       - "5555:5555"
     environment:
-      - DEBUG=${DEBUG:-False}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
       - REDIS_URL=redis://redis:6379/0
+      - DJANGO_ENV=development
     depends_on:
       - redis
       - backend

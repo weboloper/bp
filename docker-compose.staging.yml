@@ -1,4 +1,6 @@
-version: '3.8'
+# Staging environment için .env.staging dosyasını kullan
+env_file:
+  - .env.staging
 
 services:
   # PostgreSQL Database (Staging)
@@ -33,6 +35,8 @@ services:
       dockerfile: Dockerfile
     container_name: bp_backend_staging
     command: gunicorn --bind 0.0.0.0:8000 config.wsgi:application --workers=2 --timeout=60 --reload
+    env_file:
+      - .env.staging
     volumes:
       - ./backend:/app
       - static_staging_volume:/app/static
@@ -40,12 +44,8 @@ services:
     ports:
       - "8001:8000"  # Farklı port
     environment:
-      - DEBUG=${DEBUG:-True}  # Staging'de debug aktif
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
       - REDIS_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.yourdomain.com}
-      - DOMAIN=${DOMAIN:-staging.yourdomain.com}
       - DJANGO_ENV=staging
     depends_on:
       - postgres
@@ -64,15 +64,14 @@ services:
       dockerfile: Dockerfile
     container_name: bp_celery_staging
     command: celery -A config worker -l info --concurrency=1
+    env_file:
+      - .env.staging
     volumes:
       - ./backend:/app
       - media_staging_volume:/app/media
     environment:
-      - DEBUG=${DEBUG:-True}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
       - REDIS_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.yourdomain.com}
       - DJANGO_ENV=staging
     depends_on:
       - postgres
@@ -92,14 +91,13 @@ services:
       dockerfile: Dockerfile
     container_name: bp_celery_beat_staging
     command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    env_file:
+      - .env.staging
     volumes:
       - ./backend:/app
     environment:
-      - DEBUG=${DEBUG:-True}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
       - REDIS_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,staging.yourdomain.com}
       - DJANGO_ENV=staging
     depends_on:
       - postgres
@@ -208,11 +206,11 @@ services:
       dockerfile: Dockerfile
     container_name: bp_flower_staging
     command: celery -A config flower --port=5555
+    env_file:
+      - .env.staging
     ports:
       - "5556:5555"
     environment:
-      - DEBUG=${DEBUG:-True}
-      - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_ENV=staging
