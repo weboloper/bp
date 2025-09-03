@@ -7,6 +7,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: bp_postgres_prod
+    env_file:
+      - .env.prod
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-bp_prod_db}
       POSTGRES_USER: ${POSTGRES_USER:-bp_prod_user}
@@ -113,6 +115,8 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
     container_name: bp_nginx
+    env_file:
+      - .env.prod
     ports:
       - "80:80"
       - "443:443"
@@ -136,6 +140,8 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: bp_certbot
+    env_file:
+      - .env.prod
     volumes:
       - ./nginx/ssl:/etc/letsencrypt
       - ./nginx/ssl/www:/var/www/certbot

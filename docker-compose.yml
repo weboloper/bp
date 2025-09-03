@@ -7,6 +7,8 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: bp_postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-bp_db}
       POSTGRES_USER: ${POSTGRES_USER:-bp_user}
@@ -99,6 +101,8 @@ services:
       context: ./nginx
       dockerfile: Dockerfile
     container_name: bp_nginx
+    env_file:
+      - .env
     ports:
       - "80:80"
       - "443:443"
@@ -116,6 +120,8 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: bp_pgadmin
+    env_file:
+      - .env
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@bp.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
