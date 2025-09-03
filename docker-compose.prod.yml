@@ -16,8 +16,6 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
-    networks:
-      - bp_network
     # Only start if DATABASE_URL points to container
     profiles:
       - postgres
@@ -178,8 +176,6 @@ services:
     restart: unless-stopped
     depends_on:
       - nginx
-    networks:
-      - bp_network
     healthcheck:
       test: ["CMD", "certbot", "certificates"]
       interval: 12h
@@ -204,8 +200,6 @@ services:
     depends_on:
       - redis
       - backend
-    networks:
-      - bp_network
     restart: unless-stopped
 
 volumes:

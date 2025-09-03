@@ -177,8 +177,6 @@ services:
     restart: unless-stopped
     depends_on:
       - nginx
-    networks:
-      - bp_staging_network
     healthcheck:
       test: ["CMD", "certbot", "certificates"]
       interval: 12h
@@ -201,8 +199,6 @@ services:
       - "5051:80"
     depends_on:
       - postgres
-    networks:
-      - bp_staging_network
     restart: unless-stopped
 
   # Flower for Celery Monitoring (Staging)
@@ -223,8 +219,6 @@ services:
     depends_on:
       - redis
       - backend
-    networks:
-      - bp_staging_network
     restart: unless-stopped
 
 volumes:
