@@ -16,6 +16,8 @@ services:
     ports:
       - "5433:5432"  # Farklı port (production ile çakışmasın)
     restart: unless-stopped
+    stop_grace_period: 30s  # 30 saniye sonra zorla durdur
+    stop_signal: SIGTERM     # İlk olarak graceful shutdown dene
 
   # Redis Cache & Celery Broker (Staging)
   redis:

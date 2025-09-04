@@ -12,7 +12,7 @@ up: ## Development servilerini çalıştır (PostgreSQL dahil)
 	docker-compose up -d
 
 down: ## Tüm servisleri durdur
-	docker-compose down
+	docker-compose down --timeout 30
 
 # Production Commands  
 build-prod: ## Production için Docker imajlarını oluştur
@@ -28,7 +28,7 @@ up-prod-postgres: ## Production servilerini PostgreSQL container ile çalıştı
 	docker-compose --env-file .env.prod -f docker-compose.prod.yml --profile postgres up -d
 
 down-prod: ## Production servilerini durdur
-	docker-compose -f docker-compose.prod.yml down
+	docker-compose --env-file .env.prod -f docker-compose.prod.yml down --timeout 30
 
 # Staging Commands
 build-staging: ## Staging için Docker imajlarını oluştur
@@ -40,7 +40,7 @@ up-staging: ## Staging servilerini çalıştır (container DB)
 	docker-compose --env-file .env.staging -f docker-compose.staging.yml up -d
 
 down-staging: ## Staging servilerini durdur
-	docker-compose -f docker-compose.staging.yml down
+	docker-compose --env-file .env.staging -f docker-compose.staging.yml down --timeout 30
 
 # Logging
 logs: ## Development logları göster
