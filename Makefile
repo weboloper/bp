@@ -6,94 +6,94 @@ help: ## Bu yardım mesajını göster
 
 # Development Commands
 build: ## Docker imajlarını oluştur
-	docker-compose build
+	docker compose build
 
 up: ## Development servilerini çalıştır (PostgreSQL dahil)
-	docker-compose up -d
+	docker compose up -d
 
 down: ## Tüm servisleri durdur
-	docker-compose down --timeout 30
+	docker compose down --timeout 30
 
 # Production Commands  
 build-prod: ## Production için Docker imajlarını oluştur
 	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml build
+	docker compose --env-file .env.prod -f docker-compose.prod.yml build
 
 up-prod: ## Production servilerini çalıştır (external DB default, --profile postgres for container DB)
 	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml up -d
+	docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 up-prod-postgres: ## Production servilerini PostgreSQL container ile çalıştır
 	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml --profile postgres up -d
+	docker compose --env-file .env.prod -f docker-compose.prod.yml --profile postgres up -d
 
 down-prod: ## Production servilerini durdur
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml down --timeout 30
+	docker compose --env-file .env.prod -f docker-compose.prod.yml down --timeout 30
 
 # Staging Commands
 build-staging: ## Staging için Docker imajlarını oluştur
 	@if [ ! -f .env.staging ]; then echo "\033[31m✗ .env.staging dosyası bulunamadı! Örnek: cp .env.staging.example .env.staging\033[0m"; exit 1; fi
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml build
+	docker compose --env-file .env.staging -f docker-compose.staging.yml build
 
 up-staging: ## Staging servilerini çalıştır (container DB)
 	@if [ ! -f .env.staging ]; then echo "\033[31m✗ .env.staging dosyası bulunamadı! Örnek: cp .env.staging.example .env.staging\033[0m"; exit 1; fi
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml up -d
+	docker compose --env-file .env.staging -f docker-compose.staging.yml up -d
 
 down-staging: ## Staging servilerini durdur
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml down --timeout 30
+	docker compose --env-file .env.staging -f docker-compose.staging.yml down --timeout 30
 
 # Logging
 logs: ## Development logları göster
-	docker-compose logs -f
+	docker compose logs -f
 
 logs-prod: ## Production logları göster
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml logs -f
+	docker compose --env-file .env.prod -f docker-compose.prod.yml logs -f
 
 logs-staging: ## Staging logları göster
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml logs -f
+	docker compose --env-file .env.staging -f docker-compose.staging.yml logs -f
 
 logs-backend: ## Sadece backend loglarını göster
-	docker-compose logs -f backend
+	docker compose logs -f backend
 
 logs-celery: ## Celery loglarını göster
-	docker-compose logs -f celery celery-beat
+	docker compose logs -f celery celery-beat
 
 # Database & Migrations
 shell: ## Backend container'ında shell aç
-	docker-compose exec backend /bin/bash
+	docker compose exec backend /bin/bash
 
 shell-db: ## PostgreSQL shell aç (sadece development)
-	docker-compose exec postgres psql -U bp_user -d bp_db
+	docker compose exec postgres psql -U bp_user -d bp_db
 
 migrate: ## Django migration'ları çalıştır
-	docker-compose exec backend python manage.py migrate
+	docker compose exec backend python manage.py migrate
 
 migrate-prod: ## Production Django migration'ları çalıştır
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py migrate
+	docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py migrate
 
 migrate-staging: ## Staging Django migration'ları çalıştır
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py migrate
+	docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py migrate
 
 makemigrations: ## Yeni migration'lar oluştur
-	docker-compose exec backend python manage.py makemigrations
+	docker compose exec backend python manage.py makemigrations
 
 createsuperuser: ## Django superuser oluştur
-	docker-compose exec backend python manage.py createsuperuser
+	docker compose exec backend python manage.py createsuperuser
 
 createsuperuser-prod: ## Production Django superuser oluştur
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py createsuperuser
+	docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py createsuperuser
 
 createsuperuser-staging: ## Staging Django superuser oluştur
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py createsuperuser
+	docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py createsuperuser
 
 collectstatic: ## Static dosyaları topla
-	docker-compose exec backend python manage.py collectstatic --noinput
+	docker compose exec backend python manage.py collectstatic --noinput
 
 collectstatic-prod: ## Production static dosyaları topla
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
+	docker compose --env-file .env.prod -f docker-compose.prod.yml exec backend python manage.py collectstatic --noinput
 
 collectstatic-staging: ## Staging static dosyaları topla
-	docker-compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py collectstatic --noinput
+	docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py collectstatic --noinput
 
 # Utility Commands
 restart: ## Development servisleri yeniden başlat
@@ -109,10 +109,10 @@ clean: ## Kullanılmayan Docker objelerini temizle
 	docker system prune -f
 
 dev: ## Development modunda çalıştır (reload ile)
-	docker-compose exec backend python manage.py runserver 0.0.0.0:8000
+	docker compose exec backend python manage.py runserver 0.0.0.0:8000
 
 test: ## Django testleri çalıştır
-	docker-compose exec backend python manage.py test
+	docker compose exec backend python manage.py test
 
 # SSL Setup (Production)
 ssl-init: ## Let's Encrypt SSL sertifikası al (ilk kurulum)
@@ -134,7 +134,7 @@ ssl-renew: ## SSL sertifikasını yenile
 		renew --quiet --no-self-upgrade
 	@echo "✅ SSL sertifikası yenilendi!"
 	@echo "🔄 Nginx yeniden başlatılıyor..."
-	docker-compose --env-file .env.prod -f docker-compose.prod.yml restart nginx
+	docker compose --env-file .env.prod -f docker-compose.prod.yml restart nginx
 	@echo "✅ Nginx yeniden başlatıldı!"
 
 ssl-status: ## SSL sertifikası durumunu kontrol et
