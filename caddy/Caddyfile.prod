@@ -1,0 +1,94 @@
+# Production Caddyfile - Otomatik HTTPS etkin
+{
+    # Email adresini çevre değişkeninden al
+    email {$SSL_EMAIL}
+}
+
+# Production server (Otomatik HTTPS)
+{$DOMAIN} {
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+    
+    # API Rate limiting (daha sıkı)
+    @api {
+        path /api/*
+    }
+    handle @api {
+        rate_limit {
+            zone api {
+                key {remote}
+                events 10
+                window 1s
+            }
+        }
+        reverse_proxy backend:8000
+    }
+    
+    # Login rate limiting (çok sıkı)
+    @login {
+        path /api/auth/login/*
+    }
+    handle @login {
+        rate_limit {
+            zone login {
+                key {remote}
+                events 1
+                window 1s
+            }
+        }
+        reverse_proxy backend:8000
+    }
+    
+    # Static dosyalar - optimizasyonlu
+    handle /static/* {
+        root * /static
+        file_server
+        header Cache-Control "public, max-age=31536000, immutable"
+        encode gzip
+    }
+    
+    # Media dosyalar
+    handle /media/* {
+        root * /media
+        file_server
+        header Cache-Control "public, max-age=2592000"
+    }
+    
+    # Health check
+    handle /health {
+        respond "healthy" 200
+    }
+    
+    # Ana backend proxy
+    reverse_proxy backend:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        
+        # Timeout ayarları
+        transport http {
+            dial_timeout 30s
+            response_header_timeout 30s
+        }
+    }
+    
+    # Gzip sıkıştırma
+    encode gzip
+    
+    # Log
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}
+
+# HTTP'den HTTPS'e yönlendirme (otomatik)
+# Caddy bunu otomatik yapar, manuel konfigürasyon gerekmez

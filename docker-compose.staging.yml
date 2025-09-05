@@ -107,12 +107,12 @@ services:
       - backend
     restart: unless-stopped
 
-  # Nginx Reverse Proxy (Staging)
-  nginx:
+  # Caddy Reverse Proxy (Staging)
+  caddy:
     build:
-      context: ./nginx
+      context: ./caddy
       dockerfile: Dockerfile
-    container_name: bp_nginx_staging
+    container_name: bp_caddy_staging
     env_file:
       - .env.staging
     ports:
@@ -121,69 +121,24 @@ services:
     volumes:
       - static_staging_volume:/static
       - media_staging_volume:/media
-      - ./nginx/ssl:/etc/letsencrypt
-      - ./nginx/ssl/www:/var/www/certbot
+      - caddy_staging_data:/data
+      - caddy_staging_config:/config
+      - ./caddy/logs:/var/log/caddy
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
     environment:
       - DOMAIN=${DOMAIN:-staging.yourdomain.com}
+      - SSL_EMAIL=${SSL_EMAIL}
     depends_on:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health/"]
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # SSL Certificate Auto-Renewal Container (Staging)
-  certbot-staging:
-    image: certbot/certbot:latest
-    container_name: bp_certbot_staging
-    env_file:
-      - .env.staging
-    volumes:
-      - ./nginx/ssl:/etc/letsencrypt
-      - ./nginx/ssl/www:/var/www/certbot
-    environment:
-      - SSL_EMAIL=${SSL_EMAIL}
-      - DOMAIN=${DOMAIN:-staging.yourdomain.com}
-    command: >
-      sh -c "
-      # İlk sertifika kontrolü (staging certificate)
-      if [ ! -d '/etc/letsencrypt/live/${DOMAIN}' ]; then
-        echo '🔒 Staging SSL sertifikası alınıyor (test sertifikası)...';
-        certbot certonly --webroot --webroot-path=/var/www/certbot --staging --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} --non-interactive;
-        if [ $? -eq 0 ]; then
-          echo '✅ Staging SSL sertifikası başarıyla alındı! (Test sertifikası)';
-          echo '⚠️ Not: Bu test sertifikasıdır, browser güvenlik uyarısı verebilir.';
-        else
-          echo '❌ Staging SSL sertifikası alınamadı!';
-          exit 1;
-        fi;
-      fi;
-      
-      # Sürekli yenileme döngüsü  
-      while :; do
-        echo '🔍 SSL sertifikaları kontrol ediliyor... ($(date))';
-        certbot renew --webroot --webroot-path=/var/www/certbot --quiet --no-self-upgrade;
-        
-        if [ $? -eq 0 ]; then
-          echo '✅ SSL kontrol/yenileme başarılı, Nginx yeniden yükleniyor...';
-          docker exec bp_nginx_staging nginx -s reload 2>/dev/null || echo '⚠️ Nginx reload hatası';
-        else
-          echo '❌ SSL yenileme hatası!';
-        fi;
-        
-        echo '⏰ SSL kontrol tamamlandı. 12 saat bekleniyor...';
-        sleep 12h;
-      done"
-    restart: unless-stopped
-    depends_on:
-      - nginx
-    healthcheck:
-      test: ["CMD", "certbot", "certificates"]
-      interval: 12h
-      timeout: 30s
-      retries: 3
+  # SSL artık Caddy tarafından otomatik olarak halleediliyor
+  # Certbot staging container'ına gerek yok!
 
   # pgAdmin for Staging Database Management
   pgadmin:
@@ -233,6 +188,10 @@ volumes:
   media_staging_volume:
     driver: local
   pgadmin_staging_data:
+    driver: local
+  caddy_staging_data:
+    driver: local
+  caddy_staging_config:
     driver: local
 
 networks:

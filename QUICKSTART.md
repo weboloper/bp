@@ -171,9 +171,8 @@ make collectstatic-prod
 ### 5. HTTPS Aktifleştir
 
 ```bash
-# SSL sertifikası otomatik alınır, HTTPS yönlendir:
-make ssl-enable-https
-make restart-prod
+# SSL sertifikası otomatik alınır (Caddy), herhangi bir ek adım gerekmiyor!
+# Test et
 ```
 
 ### 6. Test Et ✅
@@ -303,7 +302,7 @@ cPanel (Shared):     VPS (Docker):
 ✅ Django Backend      (http://localhost:8000)
 ✅ PostgreSQL          (localhost:5432)
 ✅ Redis               (localhost:6379)
-✅ Nginx               (http://localhost:80)
+✅ Caddy               (http://localhost:80)
 ✅ pgAdmin             (http://localhost:5050)
 ✅ Flower              (http://localhost:5555)
 ✅ Celery Worker
@@ -316,12 +315,12 @@ cPanel (Shared):     VPS (Docker):
 ✅ Django Backend      (https://staging.domain.com)
 ✅ PostgreSQL          (container)
 ✅ Redis               (container)
-✅ Nginx + SSL         (https)
+✅ Caddy + SSL         (https)
 ✅ pgAdmin             (http://IP:5051)
 ✅ Flower              (http://IP:5556)
 ✅ Celery Worker
 ✅ Celery Beat
-✅ Certbot SSL         (otomatik yenileme)
+✅ Auto-SSL            (Caddy)
 ```
 
 ### Production
@@ -330,11 +329,11 @@ cPanel (Shared):     VPS (Docker):
 ✅ Django Backend      (https://yourdomain.com)
 ✅ External PostgreSQL (managed)
 ✅ Redis               (container)
-✅ Nginx + SSL         (https)
+✅ Caddy + SSL         (https)
 ✅ Flower              (http://IP:5555 - authenticated)
 ✅ Celery Worker
 ✅ Celery Beat
-✅ Certbot SSL         (otomatik yenileme)
+✅ Auto-SSL            (Caddy)
 ❌ pgAdmin             (güvenlik için kapalı)
 ```
 
@@ -386,7 +385,7 @@ make logs-backend
 **SSL sertifikası alınamıyor:**
 
 ```bash
-make logs-ssl
+make caddy-logs-prod
 # DNS doğru yönlendirildi mi kontrol et
 ```
 

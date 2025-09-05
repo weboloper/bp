@@ -105,12 +105,12 @@ services:
       - backend
     restart: unless-stopped
 
-  # Nginx Reverse Proxy with SSL
-  nginx:
+  # Caddy Reverse Proxy with Auto-SSL
+  caddy:
     build:
-      context: ./nginx
+      context: ./caddy
       dockerfile: Dockerfile
-    container_name: bp_nginx
+    container_name: bp_caddy_prod
     env_file:
       - .env.prod
     ports:
@@ -119,68 +119,24 @@ services:
     volumes:
       - static_volume:/static
       - media_volume:/media
-      - ./nginx/ssl:/etc/letsencrypt  # Let's Encrypt sertifikaları
-      - ./nginx/ssl/www:/var/www/certbot  # ACME challenge
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./caddy/logs:/var/log/caddy
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
     environment:
       - DOMAIN=${DOMAIN}
+      - SSL_EMAIL=${SSL_EMAIL}
     depends_on:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health/"]
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s
       timeout: 10s
       retries: 3
 
-  # SSL Certificate Auto-Renewal Container
-  certbot:
-    image: certbot/certbot:latest
-    container_name: bp_certbot
-    env_file:
-      - .env.prod
-    volumes:
-      - ./nginx/ssl:/etc/letsencrypt
-      - ./nginx/ssl/www:/var/www/certbot
-    environment:
-      - SSL_EMAIL=${SSL_EMAIL}
-      - DOMAIN=${DOMAIN}
-    command: >
-      sh -c "
-      # İlk sertifika kontrolü (production certificate)
-      if [ ! -d '/etc/letsencrypt/live/${DOMAIN}' ]; then
-        echo '🔒 Production SSL sertifikası alınıyor...';
-        certbot certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} --non-interactive;
-        if [ $? -eq 0 ]; then
-          echo '✅ Production SSL sertifikası başarıyla alındı!';
-        else
-          echo '❌ Production SSL sertifikası alınamadı!';
-          exit 1;
-        fi;
-      fi;
-      
-      # Sürekli yenileme döngüsü  
-      while :; do
-        echo '🔍 SSL sertifikaları kontrol ediliyor... ($(date))';
-        certbot renew --webroot --webroot-path=/var/www/certbot --quiet --no-self-upgrade;
-        
-        if [ $? -eq 0 ]; then
-          echo '✅ SSL kontrol/yenileme başarılı, Nginx yeniden yükleniyor...';
-          docker exec bp_nginx nginx -s reload 2>/dev/null || echo '⚠️ Nginx reload hatası';
-        else
-          echo '❌ SSL yenileme hatası!';
-        fi;
-        
-        echo '⏰ SSL kontrol tamamlandı. 12 saat bekleniyor...';
-        sleep 12h;
-      done"
-    restart: unless-stopped
-    depends_on:
-      - nginx
-    healthcheck:
-      test: ["CMD", "certbot", "certificates"]
-      interval: 12h
-      timeout: 30s
-      retries: 3
+  # SSL artık Caddy tarafından otomatik olarak halleediliyor
+  # Certbot container'ına gerek yok!
 
   # Flower for Celery Monitoring (Production)
   flower:
@@ -210,6 +166,10 @@ volumes:
   static_volume:
     driver: local
   media_volume:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
 
 networks:

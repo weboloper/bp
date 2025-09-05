@@ -93,12 +93,12 @@ services:
       - backend
     restart: unless-stopped
 
-  # Nginx Reverse Proxy
-  nginx:
+  # Caddy Reverse Proxy (nginx yerine)
+  caddy:
     build:
-      context: ./nginx
+      context: ./caddy
       dockerfile: Dockerfile
-    container_name: bp_nginx
+    container_name: bp_caddy
     env_file:
       - .env
     ports:
@@ -107,9 +107,12 @@ services:
     volumes:
       - static_volume:/static
       - media_volume:/media
-      - ./nginx/ssl:/etc/nginx/ssl
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./caddy/logs:/var/log/caddy
     environment:
       - DOMAIN=${DOMAIN:-localhost}
+      - SSL_EMAIL=${SSL_EMAIL:-admin@example.com}
     depends_on:
       - backend
     restart: unless-stopped
@@ -158,6 +161,8 @@ volumes:
   static_volume:
   media_volume:
   pgadmin_data:
+  caddy_data:
+  caddy_config:
 
 networks:
   default:
