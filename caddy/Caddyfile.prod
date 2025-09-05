@@ -15,33 +15,13 @@
         Referrer-Policy strict-origin-when-cross-origin
     }
     
-    # API Rate limiting (daha sıkı)
-    @api {
-        path /api/*
-    }
-    handle @api {
-        rate_limit {
-            zone api {
-                key {remote}
-                events 10
-                window 1s
-            }
-        }
+    # API endpoints
+    handle /api/* {
         reverse_proxy backend:8000
     }
     
-    # Login rate limiting (çok sıkı)
-    @login {
-        path /api/auth/login/*
-    }
-    handle @login {
-        rate_limit {
-            zone login {
-                key {remote}
-                events 1
-                window 1s
-            }
-        }
+    # Admin endpoints  
+    handle /admin/* {
         reverse_proxy backend:8000
     }
     
@@ -65,7 +45,7 @@
         respond "healthy" 200
     }
     
-    # Ana backend proxy
+    # Ana backend proxy (diğer tüm istekler)
     reverse_proxy backend:8000 {
         header_up Host {host}
         header_up X-Real-IP {remote}
