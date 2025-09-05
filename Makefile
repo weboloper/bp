@@ -16,15 +16,15 @@ down: ## Tüm servisleri durdur
 
 # Production Commands  
 build-prod: ## Production için Docker imajlarını oluştur
-	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
+# 	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
 	docker compose --env-file .env.prod -f docker-compose.prod.yml build
 
 up-prod: ## Production servilerini çalıştır (external DB default, --profile postgres for container DB)
-	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
+# 	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
 	docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
 
 up-prod-postgres: ## Production servilerini PostgreSQL container ile çalıştır
-	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
+# 	@if [ ! -f .env.prod ]; then echo "\033[31m✗ .env.prod dosyası bulunamadı! Örnek: cp .env.prod.example .env.prod\033[0m"; exit 1; fi
 	docker compose --env-file .env.prod -f docker-compose.prod.yml --profile postgres up -d
 
 down-prod: ## Production servilerini durdur
@@ -32,11 +32,11 @@ down-prod: ## Production servilerini durdur
 
 # Staging Commands
 build-staging: ## Staging için Docker imajlarını oluştur
-	@if [ ! -f .env.staging ]; then echo "\033[31m✗ .env.staging dosyası bulunamadı! Örnek: cp .env.staging.example .env.staging\033[0m"; exit 1; fi
+# 	@if [ ! -f .env.staging ]; then echo "\033[31m✗ .env.staging dosyası bulunamadı! Örnek: cp .env.staging.example .env.staging\033[0m"; exit 1; fi
 	docker compose --env-file .env.staging -f docker-compose.staging.yml build
 
 up-staging: ## Staging servilerini çalıştır (container DB)
-	@if [ ! -f .env.staging ]; then echo "\033[31m✗ .env.staging dosyası bulunamadı! Örnek: cp .env.staging.example .env.staging\033[0m"; exit 1; fi
+# 	@if [ ! -f .env.staging ]; then echo "\033[31m✗ .env.staging dosyası bulunamadı! Örnek: cp .env.staging.example .env.staging\033[0m"; exit 1; fi
 	docker compose --env-file .env.staging -f docker-compose.staging.yml up -d
 
 down-staging: ## Staging servilerini durdur
