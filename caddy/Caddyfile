@@ -39,13 +39,4 @@
         header_up X-Forwarded-For {remote}
         header_up X-Forwarded-Proto {scheme}
     }
-    
-    # Rate limiting (basit)
-    rate_limit {
-        zone static {
-            key {remote}
-            events 100
-            window 1m
-        }
-    }
 }
