@@ -116,15 +116,15 @@ services:
     env_file:
       - .env.staging
     ports:
-      - "8080:80"   # HTTP port (farklı)
-      - "8443:443"  # HTTPS port (farklı)
+      - "8080:80"   # HTTP port (staging)
+      - "8443:443"  # HTTPS port (staging)
     volumes:
       - static_staging_volume:/static
       - media_staging_volume:/media
       - caddy_staging_data:/data
       - caddy_staging_config:/config
       - ./caddy/logs:/var/log/caddy
-      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
     environment:
       - DOMAIN=${DOMAIN:-staging.yourdomain.com}
       - SSL_EMAIL=${SSL_EMAIL}
