@@ -1,10 +1,13 @@
+# Development Caddyfile - otomatik HTTPS devre dışı
 {
-    # SSL email adresi
-    email admin@projeksen.com
+    # Development için otomatik HTTPS'i kapat
+    auto_https off
+    # Admin API'yi devre dışı bırak
+    admin off
 }
 
-# vps.projeksen.com (Auto HTTPS)
-vps.projeksen.com {
+# Development server (HTTP only)
+:80 {
     # Backend'e proxy
     reverse_proxy /api/* backend:8000
     reverse_proxy /admin/* backend:8000
@@ -33,13 +36,7 @@ vps.projeksen.com {
     reverse_proxy backend:8000 {
         header_up Host {host}
         header_up X-Real-IP {remote}
-    }
-    
-    # Security headers
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        X-Content-Type-Options nosniff
-        X-Frame-Options DENY
-        X-XSS-Protection "1; mode=block"
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
     }
 }
