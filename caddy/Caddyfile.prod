@@ -2,8 +2,8 @@
 
 # Global options
 {
-    # Auto HTTPS'i tamamen kapat
-    auto_https off
+    # Auto HTTPS redirect'i kapat, ama SSL'i aktif tut
+    auto_https disable_redirects
 }
 
 # HTTP de serve et (debug için)
@@ -31,10 +31,12 @@
     reverse_proxy backend:8000
 }
 
-# HTTPS (production)
-{$DOMAIN} {
-    # Otomatik SSL (Let's Encrypt)
-    tls {$SSL_EMAIL}
+# HTTPS (production) - Manual TLS
+{$DOMAIN}:443 {
+    # Manual SSL (Let's Encrypt)
+    tls {$SSL_EMAIL} {
+        protocols tls1.2 tls1.3
+    }
     
     # Security headers
     header {
