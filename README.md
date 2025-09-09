@@ -28,6 +28,7 @@ Choose your environment and get started in minutes:
 - **Celery** - Background tasks & scheduling
 - **Caddy** - Reverse proxy with auto-SSL
 - **Docker Compose** - Multi-environment orchestration
+- **Pre-commit Hooks** - Automatic code quality (Black, flake8, isort)
 
 ### 📊 Monitoring Stack
 - **Sentry** - Error tracking & performance monitoring (ready to activate)
@@ -91,6 +92,14 @@ make shell             # Django shell
 make migrate           # Run migrations
 make test              # Run tests
 make collectstatic     # Collect static files
+```
+
+### Code Quality Commands
+```bash
+make format            # Auto-format code (Black + isort)
+make lint              # Run linting (flake8)  
+make code-check        # All quality checks
+make precommit-install # Setup pre-commit hooks
 ```
 
 ---
@@ -432,6 +441,7 @@ services:
 - **[🔧 SERVICES.md](./SERVICES.md)** - Detailed services documentation  
 - **[📊 MONITORING.md](./MONITORING.md)** - Complete monitoring & health checks guide
 - **[🔐 DATABASE_ACCESS.md](./DATABASE_ACCESS.md)** - Secure database & monitoring access
+- **[🔧 CODE_QUALITY.md](./CODE_QUALITY.md)** - Pre-commit hooks & code quality standards
 
 ---
 

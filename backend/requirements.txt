@@ -35,6 +35,14 @@ django-storages==1.14.2
 # Development
 django-debug-toolbar==4.2.0
 
+# Code Quality & Pre-commit
+pre-commit==3.5.0
+black==23.9.1
+isort==5.12.0
+flake8==6.1.0
+bandit==1.7.5
+django-upgrade==1.15.0
+
 # Security
 django-ratelimit==4.1.0
 sentry-sdk[django]==2.15.0

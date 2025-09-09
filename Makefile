@@ -95,7 +95,31 @@ collectstatic-prod: ## Production static dosyaları topla
 collectstatic-staging: ## Staging static dosyaları topla
 	docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py collectstatic --noinput
 
-# Health Check Commands
+# Code Quality Commands
+format: ## Code'u otomatik formatla (Black + isort)
+	docker compose exec backend black /app --line-length 88
+	docker compose exec backend isort /app --profile black
+
+lint: ## Linting kontrolleri (flake8)
+	docker compose exec backend flake8 /app --max-line-length=88 --extend-ignore=E203,W503
+
+code-check: ## Tüm code quality kontrolleri
+	@echo "🔍 Running code quality checks..."
+	make format
+	make lint
+	@echo "✅ Code quality checks completed!"
+
+precommit-install: ## Pre-commit hooks kurulumu
+	@echo "🔧 Installing pre-commit hooks..."
+	docker compose exec backend pre-commit install
+	@echo "✅ Pre-commit hooks installed!"
+	@echo "💡 Now commits will be automatically checked for code quality"
+
+precommit-run: ## Pre-commit'i tüm dosyalar üzerinde çalıştır
+	docker compose exec backend pre-commit run --all-files
+
+precommit-update: ## Pre-commit hooks'ları güncelle
+	docker compose exec backend pre-commit autoupdate
 health: ## Application health check
 	chmod +x scripts/health_check.sh
 	./scripts/health_check.sh development
