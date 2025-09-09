@@ -95,7 +95,30 @@ collectstatic-prod: ## Production static dosyaları topla
 collectstatic-staging: ## Staging static dosyaları topla
 	docker compose --env-file .env.staging -f docker-compose.staging.yml exec backend python manage.py collectstatic --noinput
 
-# Utility Commands
+# Health Check Commands
+health: ## Application health check
+	chmod +x scripts/health_check.sh
+	./scripts/health_check.sh development
+
+health-staging: ## Staging health check
+	chmod +x scripts/health_check.sh
+	./scripts/health_check.sh staging
+
+health-prod: ## Production health check
+	chmod +x scripts/health_check.sh
+	./scripts/health_check.sh production
+
+docker-health: ## Docker container health check
+	chmod +x scripts/docker_health.sh
+	./scripts/docker_health.sh development
+
+docker-health-staging: ## Docker staging health check
+	chmod +x scripts/docker_health.sh
+	./scripts/docker_health.sh staging
+
+docker-health-prod: ## Docker production health check
+	chmod +x scripts/docker_health.sh
+	./scripts/docker_health.sh production
 restart: ## Development servisleri yeniden başlat
 	make down && make up
 

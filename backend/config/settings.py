@@ -208,7 +208,7 @@ if (BASE_DIR / 'static').exists():
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Static Files Strategy Configuration
-STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='nginx')
+STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='caddy')
 
 if STATIC_FILES_HANDLER == 'whitenoise':
     # WhiteNoise Configuration (cPanel için)
@@ -253,6 +253,11 @@ elif STATIC_FILES_HANDLER == 's3':
     }
     AWS_S3_FILE_OVERWRITE = False
     AWS_QUERYSTRING_AUTH = False
+
+elif STATIC_FILES_HANDLER == 'caddy':
+    # Caddy Web Server Configuration
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+    # Caddy static dosyaları serve ediyor, Django karışmasın
 
 else:
     # Default: Nginx/Apache serve eder (VPS için)

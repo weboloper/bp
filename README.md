@@ -29,11 +29,14 @@ Choose your environment and get started in minutes:
 - **Caddy** - Reverse proxy with auto-SSL
 - **Docker Compose** - Multi-environment orchestration
 
-### 📊 Monitoring & Management
-- **pgAdmin** - Database management UI
-- **Flower** - Celery task monitoring
-- **Sentry** - Error tracking & performance monitoring
-- **Auto-SSL** - Automatic HTTPS with Let's Encrypt
+### 📊 Monitoring Stack
+- **Sentry** - Error tracking & performance monitoring (ready to activate)
+- **Built-in Health Checks** - `/health/` endpoint + comprehensive scripts
+- **Flower** - Celery task monitoring (secure SSH access)
+- **pgAdmin** - Database management UI (dev/staging)
+- **DigitalOcean Monitoring** - VPS metrics (CPU, Memory, Network)
+- **Caddy Logs** - Structured JSON access logs
+- **Health Check Scripts** - Automated system health validation
 
 ### 🔄 Multi-Environment Support
 - **Development** - Full local stack with hot reload
@@ -203,15 +206,42 @@ make caddy-logs-prod
 
 ---
 
-## 📊 Monitoring & Debugging
+## 📊 Monitoring & Health Checks
 
-### Built-in Monitoring
-| Service | Purpose | Access |
-|---------|---------|--------|
-| **Flower** | Celery task monitoring | `:5555` |
-| **pgAdmin** | Database management | `:5050` (dev/staging) |
-| **Sentry** | Error tracking | Configure SENTRY_DSN |
-| **Health Check** | Service status | `/health/` |
+### Comprehensive Monitoring Stack
+| Service | Purpose | Status | Access |
+|---------|---------|--------|--------|
+| **Sentry** | Error tracking & APM | Ready to activate | Configure SENTRY_DSN |
+| **Health Endpoint** | Service status | Built-in | `/health/` |
+| **Health Scripts** | System validation | Automated | `make health-prod` |
+| **Flower** | Celery monitoring | Secure access | SSH tunnel required |
+| **pgAdmin** | Database management | Dev/staging | `:5050/:5051` |
+| **Caddy Logs** | Access logs | JSON format | `make logs-caddy` |
+| **DO Monitoring** | VPS metrics | Automatic | Dashboard |
+
+### Quick Health Check
+```bash
+# Application health
+curl https://yourdomain.com/health/
+
+# Comprehensive check
+make health-prod
+
+# Docker containers
+make docker-health-prod
+```
+
+### Sentry Setup (Error Tracking)
+```bash
+# 1. Create project at https://sentry.io
+# 2. Add DSN to .env files:
+SENTRY_DSN=https://your-dsn@sentry.io/project-id
+
+# 3. Restart services
+make restart-prod
+```
+
+**📊 [Full Monitoring Guide](./MONITORING.md) - Complete monitoring setup & best practices**
 
 ### Debug Commands
 ```bash
@@ -398,8 +428,10 @@ services:
 
 ## 📚 Documentation
 
-- **[QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
-- **[SERVICES.md](./SERVICES.md)** - Detailed services documentation
+- **[🚀 QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
+- **[🔧 SERVICES.md](./SERVICES.md)** - Detailed services documentation  
+- **[📊 MONITORING.md](./MONITORING.md)** - Complete monitoring & health checks guide
+- **[🔐 DATABASE_ACCESS.md](./DATABASE_ACCESS.md)** - Secure database & monitoring access
 
 ---
 

@@ -136,8 +136,9 @@ services:
     command: celery -A config flower --port=5555 --basic_auth=admin:${FLOWER_PASSWORD:-secure123}
     env_file:
       - .env.prod
-    ports:
-      - "5555:5555"
+    # Port'u expose etme - sadece internal network
+    expose:
+      - "5555"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0

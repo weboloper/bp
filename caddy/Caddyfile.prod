@@ -47,6 +47,15 @@
         Referrer-Policy strict-origin-when-cross-origin
     }
     
+    # Flower monitoring (protected path)
+    handle /flower/* {
+        uri strip_prefix /flower
+        reverse_proxy flower:5555
+        # IP whitelist (opsiyonel)
+        # @allowed remote_ip YOUR_OFFICE_IP
+        # handle @allowed
+    }
+    
     # Static dosyalar - production optimize
     handle /static/* {
         root * /

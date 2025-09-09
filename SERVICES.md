@@ -9,10 +9,9 @@ BP Django Boilerplate ile birlikte gelen tüm servisler ve nasıl kullanılacağ
 | **Django Backend** | 8000 | API & Admin | Tümü |
 | **PostgreSQL** | 5432/5433 | Database | Dev/Staging |
 | **Redis** | 6379/6380 | Cache & Queue | Tümü |
-| **Nginx** | 80/443 | Reverse Proxy | Tümü |
+| **Caddy** | 80/443 | Reverse Proxy + SSL | Tümü |
 | **pgAdmin** | 5050/5051 | DB Management | Dev/Staging |
 | **Flower** | 5555/5556 | Celery Monitoring | Tümü |
-| **Certbot** | - | SSL Management | Prod/Staging |
 
 ---
 
@@ -20,16 +19,17 @@ BP Django Boilerplate ile birlikte gelen tüm servisler ve nasıl kullanılacağ
 
 ### Django Backend
 **Ne yapar:** Ana uygulama servisi - API endpoints, admin panel  
-**Port:** 8000  
+**Port:** 8000 (internal)  
 **URL'ler:**
-- Development: http://localhost:8000
-- Production: https://yourdomain.com
+- Development: http://localhost (Caddy proxy)
+- Production: https://yourdomain.com (Caddy proxy + SSL)
 
 **Environment Variables:**
 ```bash
 DEBUG=True/False
 SECRET_KEY=your-secret-key
 DATABASE_URL=postgresql://...
+STATIC_FILES_HANDLER=caddy  # Yeni!
 ```
 
 ### PostgreSQL Database
@@ -59,14 +59,29 @@ Database: bp_staging_db
 **Port:** 6379 (dev), 6380 (staging)  
 **Kullanım:** Session cache, Celery task queue
 
-### Nginx
-**Ne yapar:** Reverse proxy, static files, SSL termination  
+### Caddy Web Server 🌟
+**Ne yapar:** Modern reverse proxy, otomatik SSL, static file serving  
 **Port:** 80 (HTTP), 443 (HTTPS)  
 **Özellikler:**
-- Static files serving (development'ta)
-- SSL certificate management
-- Rate limiting
-- Security headers
+- ✅ Otomatik Let's Encrypt SSL
+- ✅ HTTP to HTTPS redirect  
+- ✅ Static files serving (/static/*, /media/*)
+- ✅ Security headers (HSTS, XSS Protection)
+- ✅ Gzip compression
+- ✅ Health checks
+- ✅ Zero-config SSL
+
+**Caddy vs Nginx:**
+| Özellik | Caddy | Nginx |
+|---------|--------|-------|
+| SSL Setup | Otomatik ✅ | Manuel ❌ |
+| Config | Basit ✅ | Karmaşık ❌ |
+| Let's Encrypt | Built-in ✅ | Certbot gerekli ❌ |
+| HTTP/2 | Otomatik ✅ | Manuel config ❌ |
+
+**Caddy Dosyaları:**
+- `caddy/Caddyfile.dev` - Development (HTTP)
+- `caddy/Caddyfile.prod` - Staging/Production (HTTPS)
 
 ---
 
@@ -144,30 +159,47 @@ Password: staging123
 
 ---
 
-## 🔒 SSL Services
+## 🔒 SSL & Security
 
-### Certbot
-**Ne yapar:** Let's Encrypt SSL sertifika yönetimi  
-**Kullanım:** Otomatik SSL sertifika alma ve yenileme  
-**Ortamlar:** Production & Staging
+### Caddy Otomatik SSL 🌟
+**Ne yapar:** Tamamen otomatik Let's Encrypt SSL yönetimi  
+**Kullanım:** Zero-config SSL - sadece domain ayarla!  
+**Ortamlar:** Staging & Production
 
 **Özellikler:**
-- Otomatik sertifika alma
-- 12 saatte bir yenileme kontrolü  
-- Nginx ile entegrasyon
-- Health check monitoring
+- ✅ Otomatik sertifika alma (1-2 dakika)
+- ✅ Otomatik yenileme (90 günde bir)
+- ✅ HTTP to HTTPS redirect
+- ✅ Security headers (HSTS, XSS)
+- ✅ Wildcard domain desteği
+- ✅ Health check built-in
 
-**SSL Komutları:**
+**SSL Setup (Zero Config!):**
+1. DNS'i VPS IP'sine yönlendir
+2. `.env` dosyasında `DOMAIN` ve `SSL_EMAIL` ayarla
+3. `make up-prod` çalıştır
+4. 1-2 dakika bekle → SSL hazır! 🎉
+
+**SSL Status Kontrol:**
 ```bash
-# SSL durumu kontrol
-make ssl-container-status
+# SSL sertifika durumu
+curl -I https://yourdomain.com
+# "strict-transport-security" header görmelsin
 
-# SSL logları
-make logs-ssl
+# Caddy SSL logları
+make logs-caddy
 
-# Manuel yenileme
-make ssl-container-manual-renew
+# Manual SSL check
+openssl s_client -connect yourdomain.com:443
 ```
+
+**vs Certbot (Eskisinden Farkı):**
+| Özellik | Caddy | Certbot+Nginx |
+|---------|--------|---------------|
+| Setup | 0 adım ✅ | 10+ adım ❌ |
+| Config | Otomatik ✅ | Manuel ❌ |
+| Yenileme | Otomatik ✅ | Cron job ❌ |
+| Debugging | Kolay ✅ | Zor ❌ |
 
 ---
 
@@ -178,10 +210,13 @@ make ssl-container-manual-renew
 make up  # Başlat
 
 # Erişilebilir servisler:
-- Django: http://localhost:8000
+- Django: http://localhost (Caddy proxy)
 - pgAdmin: http://localhost:5050
 - Flower: http://localhost:5555
 - PostgreSQL: localhost:5432
+- Static Files: http://localhost/static/
+- Media Files: http://localhost/media/
+- Health Check: http://localhost/health
 ```
 
 ### Staging Servisleri  
@@ -189,10 +224,12 @@ make up  # Başlat
 make up-staging  # Başlat
 
 # Erişilebilir servisler:
-- Django: https://staging.yourdomain.com
+- Django: https://staging.yourdomain.com (Auto SSL!)
 - pgAdmin: http://localhost:5051
 - Flower: http://localhost:5556
 - PostgreSQL: localhost:5433
+- Static Files: https://staging.yourdomain.com/static/
+- Media Files: https://staging.yourdomain.com/media/
 ```
 
 ### Production Servisleri
@@ -200,9 +237,11 @@ make up-staging  # Başlat
 make up-prod  # Başlat
 
 # Erişilebilir servisler:
-- Django: https://yourdomain.com
+- Django: https://yourdomain.com (Auto SSL!)
 - Flower: http://localhost:5555 (authenticated)
 - Managed Database: External
+- Static Files: https://yourdomain.com/static/ (Cached, Gzipped)
+- Media Files: https://yourdomain.com/media/
 ```
 
 ---
@@ -213,15 +252,21 @@ make up-prod  # Başlat
 ```bash
 # Tüm servisler
 make up / make down / make restart
-make logs / make logs-backend / make logs-celery
+make logs / make logs-backend / make logs-celery / make logs-caddy
 
 # Specific ortamlar  
 make up-prod / make down-prod / make restart-prod
 make up-staging / make down-staging / make restart-staging
 
-# Monitoring
-make logs-ssl          # SSL logları
-make logs-staging-ssl  # Staging SSL logları
+# Caddy specific
+make logs-caddy        # Caddy logları
+make logs-caddy-prod   # Production Caddy logları
+make logs-caddy-staging # Staging Caddy logları
+
+# Static files
+make collectstatic          # Development
+make collectstatic-prod     # Production  
+make collectstatic-staging  # Staging
 
 # Database
 make shell-db          # PostgreSQL shell (dev)
@@ -236,8 +281,12 @@ make migrate-staging   # Staging migration
 docker ps
 
 # Health check'ler
-curl http://localhost/health/        # Development
-curl https://yourdomain.com/health/  # Production
+curl http://localhost/health         # Development
+curl https://yourdomain.com/health   # Production (SSL ile)
+
+# Static files test
+curl -I http://localhost/static/admin/css/base.css        # Development
+curl -I https://yourdomain.com/static/admin/css/base.css  # Production
 
 # Database bağlantısı
 make shell
@@ -252,19 +301,31 @@ python manage.py dbshell
 - **pgAdmin**: Production'da kullanma, external tool kullan
 - **Flower**: Basic authentication ile korumalı
 - **Sentry**: Production'da mutlaka aktif et
-- **SSL**: Certbot otomatik yeniliyor
+- **Caddy SSL**: Otomatik HSTS, security headers
 
 ### Performance
 - **Redis**: Memory limit ayarla
 - **PostgreSQL**: Managed DB kullan (önerilen)
-- **Nginx**: Static files caching aktif
+- **Caddy**: Static files caching + Gzip aktif
 - **Celery**: Worker sayısını ayarla
+
+### Static Files Strategy
+```bash
+# Development
+STATIC_FILES_HANDLER=caddy  # Caddy serves static files
+
+# cPanel/Shared Hosting
+STATIC_FILES_HANDLER=whitenoise  # Django serves with WhiteNoise
+
+# AWS S3
+STATIC_FILES_HANDLER=s3  # AWS S3 CDN
+```
 
 ### Monitoring
 - **Flower**: Task performance izle
 - **Sentry**: Error rate izle  
 - **pgAdmin**: DB performance izle (staging'de)
-- **Logs**: `make logs-prod` ile sistem logları
+- **Caddy Access Logs**: HTTP request'leri izle
 
 ---
 
@@ -294,11 +355,68 @@ make logs-celery
 
 **SSL sertifikası alınamıyor:**
 ```bash
-make logs-ssl
-# DNS'in doğru yönlendirildiğini kontrol et
-# Port 80'in açık olduğunu kontrol et
+make logs-caddy
+
+# Kontrol listesi:
+# ✅ DNS doğru yönlendirildi mi? (A record)
+# ✅ Port 80/443 açık mı?
+# ✅ DOMAIN doğru .env'de tanımlı mı?
+# ✅ SSL_EMAIL doğru mu?
+# ✅ Firewall engel oluyor mu?
+```
+
+**Static files 404:**
+```bash
+# Collectstatic yapıldı mı?
+make collectstatic
+
+# Volume mount doğru mu?
+docker exec -it caddy_container ls -la /static/
+
+# STATIC_FILES_HANDLER doğru mu?
+docker exec -it backend_container python manage.py shell -c "
+from django.conf import settings; 
+print(settings.STATIC_FILES_HANDLER)
+"
+```
+
+**HTTP 308 redirect loop:**
+```bash
+# Development'ta HTTPS zorlanıyor mu?
+# Caddyfile.dev dosyasında auto_https off olmalı
+
+# Production'da SSL sertifikası eksik mi?
+make logs-caddy
+# Let's Encrypt rate limit aştın mı?
 ```
 
 ---
 
-*Bu dokümantasyon BP Django Boilerplate v2.0 için hazırlanmıştır.*
+## 📈 Migration from Nginx
+
+### Nginx'den Caddy'ye Geçiş
+```bash
+# 1. Eski Nginx container'larını durdur
+docker stop nginx_container certbot_container
+
+# 2. .env dosyasını güncelle
+STATIC_FILES_HANDLER=caddy
+
+# 3. Yeni Caddy compose'u başlat
+make up-prod
+
+# 4. SSL otomatik alınacak (1-2 dakika)
+# 5. Test et
+curl https://yourdomain.com/health
+```
+
+### Avantajları
+- ✅ SSL setup süresini 15 dakikadan 2 dakikaya düşürür
+- ✅ Certbot cron job'larına gerek kalmaz
+- ✅ Nginx config karmaşıklığı ortadan kalkar
+- ✅ Otomatik HTTP/2, HTTP/3 desteği
+- ✅ Built-in security headers
+
+---
+
+*Bu dokümantasyon BP Django Boilerplate v2.1 için hazırlanmıştır. Caddy Web Server entegrasyonu ile!* 🚀
