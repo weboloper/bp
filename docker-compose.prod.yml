@@ -44,8 +44,8 @@ services:
       - ./backend:/app
       - static_volume:/app/static
       - media_volume:/app/media
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=${DATABASE_URL}  # External managed DB or override
       - REDIS_URL=redis://redis:6379/0
@@ -105,35 +105,24 @@ services:
       - backend
     restart: unless-stopped
 
-  # Caddy Reverse Proxy with Auto-SSL
+  # Caddy Web Server (Production)
   caddy:
-    build:
-      context: ./caddy
-      dockerfile: Dockerfile
-    container_name: bp_caddy_prod
-    env_file:
-      - .env.prod
+    image: caddy:2-alpine
+    container_name: bp_caddy
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
       - static_volume:/static
       - media_volume:/media
       - caddy_data:/data
       - caddy_config:/config
-      - ./caddy/logs:/var/log/caddy
-      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
-    environment:
-      - DOMAIN=${DOMAIN}
-      - SSL_EMAIL=${SSL_EMAIL}
+    env_file:
+      - .env.prod
     depends_on:
       - backend
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # SSL artık Caddy tarafından otomatik olarak halleediliyor
   # Certbot container'ına gerek yok!

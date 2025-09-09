@@ -43,8 +43,8 @@ services:
       - ./backend:/app
       - static_staging_volume:/app/static
       - media_staging_volume:/app/media
-    ports:
-      - "8001:8000"  # Farklı port
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_staging_user}:${POSTGRES_PASSWORD:-bp_staging_pass}@postgres:5432/${POSTGRES_DB:-bp_staging_db}
       - REDIS_URL=redis://redis:6379/0
@@ -107,35 +107,24 @@ services:
       - backend
     restart: unless-stopped
 
-  # Caddy Reverse Proxy (Staging)
+  # Caddy Web Server (Staging)
   caddy:
-    build:
-      context: ./caddy
-      dockerfile: Dockerfile
+    image: caddy:2-alpine
     container_name: bp_caddy_staging
-    env_file:
-      - .env.staging
+    restart: unless-stopped
     ports:
-      - "8080:80"   # HTTP port (staging)
-      - "8443:443"  # HTTPS port (staging)
+      - "80:80"
+      - "443:443"
     volumes:
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
       - static_staging_volume:/static
       - media_staging_volume:/media
       - caddy_staging_data:/data
       - caddy_staging_config:/config
-      - ./caddy/logs:/var/log/caddy
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-    environment:
-      - DOMAIN=${DOMAIN:-staging.yourdomain.com}
-      - SSL_EMAIL=${SSL_EMAIL}
+    env_file:
+      - .env.staging
     depends_on:
       - backend
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # SSL artık Caddy tarafından otomatik olarak halleediliyor
   # Certbot staging container'ına gerek yok!

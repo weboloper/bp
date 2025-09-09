@@ -40,8 +40,8 @@ services:
       - ./backend:/app
       - static_volume:/app/staticfiles
       - media_volume:/app/media
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=postgresql://${POSTGRES_USER:-bp_user}:${POSTGRES_PASSWORD:-bp_pass}@postgres:5432/${POSTGRES_DB:-bp_db}
       - REDIS_URL=redis://redis:6379/0
@@ -93,29 +93,22 @@ services:
       - backend
     restart: unless-stopped
 
-  # Caddy Reverse Proxy (nginx yerine)
+  # Caddy Web Server
   caddy:
-    build:
-      context: ./caddy
-      dockerfile: Dockerfile
+    image: caddy:2-alpine
     container_name: bp_caddy
-    env_file:
-      - .env
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./caddy/Caddyfile.dev:/etc/caddy/Caddyfile
       - static_volume:/static
       - media_volume:/media
       - caddy_data:/data
       - caddy_config:/config
-      - ./caddy/logs:/var/log/caddy
-    environment:
-      - DOMAIN=${DOMAIN:-localhost}
-      - SSL_EMAIL=${SSL_EMAIL:-admin@example.com}
     depends_on:
       - backend
-    restart: unless-stopped
 
   # pgAdmin for Database Management
   pgadmin:

@@ -1,11 +1,8 @@
-# Production Caddyfile - Otomatik HTTPS etkin
-{
-    # Email adresini çevre değişkeninden al
-    email {$SSL_EMAIL}
-}
-
-# Production server (Otomatik HTTPS)
+# Staging/Production Caddyfile - HTTPS with SSL
 {$DOMAIN} {
+    # Otomatik SSL (Let's Encrypt)
+    tls {$SSL_EMAIL}
+    
     # Security headers
     header {
         Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
@@ -15,17 +12,7 @@
         Referrer-Policy strict-origin-when-cross-origin
     }
     
-    # API endpoints
-    handle /api/* {
-        reverse_proxy backend:8000
-    }
-    
-    # Admin endpoints  
-    handle /admin/* {
-        reverse_proxy backend:8000
-    }
-    
-    # Static dosyalar - optimizasyonlu
+    # Static dosyalar - production optimize
     handle /static/* {
         root * /static
         file_server
@@ -62,13 +49,4 @@
     
     # Gzip sıkıştırma
     encode gzip
-    
-    # Log
-    log {
-        output file /var/log/caddy/access.log
-        format json
-    }
 }
-
-# HTTP'den HTTPS'e yönlendirme (otomatik)
-# Caddy bunu otomatik yapar, manuel konfigürasyon gerekmez
