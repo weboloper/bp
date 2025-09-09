@@ -33,7 +33,8 @@ urlpatterns = [
     # path('api/v1/', include('your_app.urls')),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
+# Media dosyalar sadece development'ta Django'dan serve edilir
+# Static dosyalar artık Caddy tarafından serve ediliyor
+if settings.DEBUG and not settings.STATIC_FILES_HANDLER == 'nginx':
+    # Sadece media files - static files Caddy'den gelir
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

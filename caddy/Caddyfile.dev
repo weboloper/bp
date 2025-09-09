@@ -1,9 +1,12 @@
-# Development Caddyfile - HTTP only
+# Development Caddyfile - HTTP only (zorla)
 {
+    # HTTPS'i tamamen devre dışı bırak
     auto_https off
+    # Admin API'yi kapat
     admin off
 }
 
+# HTTP only - redirect yok
 :80, myproject.local:80 {
     # Static dosyalar
     handle /static/* {
