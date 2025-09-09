@@ -42,10 +42,10 @@ services:
       - .env.prod
     volumes:
       - ./backend:/app
-      - static_volume:/app/static
+      - static_volume:/app/staticfiles
       - media_volume:/app/media
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=${DATABASE_URL}  # External managed DB or override
       - REDIS_URL=redis://redis:6379/0
@@ -105,82 +105,27 @@ services:
       - backend
     restart: unless-stopped
 
-  # Nginx Reverse Proxy with SSL
-  nginx:
-    build:
-      context: ./nginx
-      dockerfile: Dockerfile
-    container_name: bp_nginx
-    env_file:
-      - .env.prod
+  # Caddy Web Server (Production)
+  caddy:
+    image: caddy:2-alpine
+    container_name: bp_caddy
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./caddy/Caddyfile.prod:/etc/caddy/Caddyfile
       - static_volume:/static
       - media_volume:/media
-      - ./nginx/ssl:/etc/letsencrypt  # Let's Encrypt sertifikaları
-      - ./nginx/ssl/www:/var/www/certbot  # ACME challenge
-    environment:
-      - DOMAIN=${DOMAIN}
-    depends_on:
-      - backend
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # SSL Certificate Auto-Renewal Container
-  certbot:
-    image: certbot/certbot:latest
-    container_name: bp_certbot
+      - caddy_data:/data
+      - caddy_config:/config
     env_file:
       - .env.prod
-    volumes:
-      - ./nginx/ssl:/etc/letsencrypt
-      - ./nginx/ssl/www:/var/www/certbot
-    environment:
-      - SSL_EMAIL=${SSL_EMAIL}
-      - DOMAIN=${DOMAIN}
-    command: >
-      sh -c "
-      # İlk sertifika kontrolü (production certificate)
-      if [ ! -d '/etc/letsencrypt/live/${DOMAIN}' ]; then
-        echo '🔒 Production SSL sertifikası alınıyor...';
-        certbot certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} --non-interactive;
-        if [ $? -eq 0 ]; then
-          echo '✅ Production SSL sertifikası başarıyla alındı!';
-        else
-          echo '❌ Production SSL sertifikası alınamadı!';
-          exit 1;
-        fi;
-      fi;
-      
-      # Sürekli yenileme döngüsü  
-      while :; do
-        echo '🔍 SSL sertifikaları kontrol ediliyor... ($(date))';
-        certbot renew --webroot --webroot-path=/var/www/certbot --quiet --no-self-upgrade;
-        
-        if [ $? -eq 0 ]; then
-          echo '✅ SSL kontrol/yenileme başarılı, Nginx yeniden yükleniyor...';
-          docker exec bp_nginx nginx -s reload 2>/dev/null || echo '⚠️ Nginx reload hatası';
-        else
-          echo '❌ SSL yenileme hatası!';
-        fi;
-        
-        echo '⏰ SSL kontrol tamamlandı. 12 saat bekleniyor...';
-        sleep 12h;
-      done"
-    restart: unless-stopped
     depends_on:
-      - nginx
-    healthcheck:
-      test: ["CMD", "certbot", "certificates"]
-      interval: 12h
-      timeout: 30s
-      retries: 3
+      - backend
+
+  # SSL artık Caddy tarafından otomatik olarak halleediliyor
+  # Certbot container'ına gerek yok!
 
   # Flower for Celery Monitoring (Production)
   flower:
@@ -191,8 +136,9 @@ services:
     command: celery -A config flower --port=5555 --basic_auth=admin:${FLOWER_PASSWORD:-secure123}
     env_file:
       - .env.prod
-    ports:
-      - "5555:5555"
+    # Port'u expose etme - sadece internal network
+    expose:
+      - "5555"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=redis://redis:6379/0
@@ -210,6 +156,10 @@ volumes:
   static_volume:
     driver: local
   media_volume:
+    driver: local
+  caddy_data:
+    driver: local
+  caddy_config:
     driver: local
 
 networks:

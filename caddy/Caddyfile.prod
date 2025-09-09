@@ -1,0 +1,96 @@
+# Staging/Production Caddyfile - HTTPS with SSL
+
+# Global options
+{
+    # Auto HTTPS redirect'i kapat, ama SSL'i aktif tut
+    auto_https disable_redirects
+}
+
+# HTTP de serve et (debug için)
+:80 {
+    # Static dosyalar - HTTP
+    handle /static/* {
+        root * /
+        file_server
+        header Cache-Control "public, max-age=31536000, immutable"
+    }
+    
+    # Media dosyalar - HTTP
+    handle /media/* {
+        root * /
+        file_server
+        header Cache-Control "public, max-age=2592000"
+    }
+    
+    # Health check - HTTP
+    handle /health {
+        respond "healthy" 200
+    }
+    
+    # Backend proxy - HTTP
+    reverse_proxy backend:8000
+}
+
+# HTTPS (production) - Manual TLS
+{$DOMAIN}:443 {
+    # Manual SSL (Let's Encrypt)
+    tls {$SSL_EMAIL} {
+        protocols tls1.2 tls1.3
+    }
+    
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        X-XSS-Protection "1; mode=block"
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+    
+    # Flower monitoring (protected path)
+    handle /flower/* {
+        uri strip_prefix /flower
+        reverse_proxy flower:5555
+        # IP whitelist (opsiyonel)
+        # @allowed remote_ip YOUR_OFFICE_IP
+        # handle @allowed
+    }
+    
+    # Static dosyalar - production optimize
+    handle /static/* {
+        root * /
+        file_server
+        header Cache-Control "public, max-age=31536000, immutable"
+        encode gzip
+    }
+    
+    # Media dosyalar
+    handle /media/* {
+        root * /
+        file_server
+        header Cache-Control "public, max-age=2592000"
+    }
+    
+    # Health check
+    handle /health {
+        respond "healthy" 200
+    }
+    
+    # Ana backend proxy (diğer tüm istekler)
+    reverse_proxy backend:8000 {
+        header_up Host {host}
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Forwarded-Host {host}
+        
+        # Timeout ayarları
+        transport http {
+            dial_timeout 30s
+            response_header_timeout 30s
+        }
+    }
+    
+    # Gzip sıkıştırma
+    encode gzip
+}

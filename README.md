@@ -1,6 +1,6 @@
 # 🚀 BP - Django Docker Boilerplate
 
-**Production-ready Django boilerplate** with Docker, Celery, Redis, PostgreSQL, Nginx, and comprehensive monitoring stack.
+**Production-ready Django boilerplate** with Docker, Celery, Redis, PostgreSQL, Caddy, and comprehensive monitoring stack.
 
 > **Perfect for:** API backends, web applications, microservices, MVP projects
 
@@ -26,14 +26,17 @@ Choose your environment and get started in minutes:
 - **PostgreSQL 15** - Primary database
 - **Redis 7** - Cache & message broker
 - **Celery** - Background tasks & scheduling
-- **Nginx** - Reverse proxy & static files
+- **Caddy** - Reverse proxy with auto-SSL
 - **Docker Compose** - Multi-environment orchestration
 
-### 📊 Monitoring & Management
-- **pgAdmin** - Database management UI
-- **Flower** - Celery task monitoring
-- **Sentry** - Error tracking & performance monitoring
-- **SSL/HTTPS** - Automatic Let's Encrypt certificates
+### 📊 Monitoring Stack
+- **Sentry** - Error tracking & performance monitoring (ready to activate)
+- **Built-in Health Checks** - `/health/` endpoint + comprehensive scripts
+- **Flower** - Celery task monitoring (secure SSH access)
+- **pgAdmin** - Database management UI (dev/staging)
+- **DigitalOcean Monitoring** - VPS metrics (CPU, Memory, Network)
+- **Caddy Logs** - Structured JSON access logs
+- **Health Check Scripts** - Automated system health validation
 
 ### 🔄 Multi-Environment Support
 - **Development** - Full local stack with hot reload
@@ -42,7 +45,7 @@ Choose your environment and get started in minutes:
 - **cPanel** - Shared hosting compatible
 
 ### 🗂️ Static Files Strategies
-- **Nginx** - High-performance static serving (VPS)
+- **Caddy** - High-performance static serving (VPS)
 - **WhiteNoise** - Simple static serving (cPanel)
 - **AWS S3** - CDN-ready cloud storage
 
@@ -108,7 +111,7 @@ make migrate-staging && make createsuperuser-staging
 ```
 
 ### Features
-- **Test SSL certificates** (Let's Encrypt staging)
+- **Auto-SSL certificates** (Let's Encrypt)
 - **Container PostgreSQL** for isolated testing
 - **Full monitoring stack** with pgAdmin & Flower
 - **Separate ports** (no conflicts with production)
@@ -136,10 +139,10 @@ make collectstatic-prod
 ```
 
 ### Production Features
-- **Real SSL certificates** (Let's Encrypt production)
+- **Auto-SSL certificates** (Let's Encrypt)
 - **Managed database** support (recommended)
 - **Secured Flower** with authentication
-- **Auto-SSL renewal** every 12 hours
+- **Auto-SSL renewal** with Caddy
 - **Performance optimized** settings
 
 ### Access Services
@@ -154,7 +157,7 @@ make up-prod           # Start production services
 make migrate-prod      # Run production migrations
 make collectstatic-prod # Collect static files
 make logs-prod         # View production logs
-make ssl-container-status # Check SSL status
+make caddy-certs       # Check SSL certificates
 ```
 
 ---
@@ -174,7 +177,7 @@ DATABASE_URL=mysql://...
 ```
 
 ### Features
-- **WhiteNoise** for static files (no nginx needed)
+- **WhiteNoise** for static files (no Caddy needed)
 - **MySQL** database support
 - **Simplified deployment** for shared hosting
 - **.htaccess** configuration included
@@ -185,17 +188,17 @@ DATABASE_URL=mysql://...
 
 ### Automatic SSL (VPS/Cloud)
 ```bash
-# SSL certificates managed by Certbot containers
-# Automatic renewal every 12 hours
-# HTTPS redirect with make ssl-enable-https
+# SSL certificates managed by Caddy automatically
+# Just set DOMAIN and SSL_EMAIL in .env.prod
+# HTTPS enabled by default
 
 # Check SSL status
-make ssl-container-status
-make logs-ssl
+make caddy-certs
+make caddy-logs-prod
 ```
 
 ### Security Features
-- **HTTPS enforcement** in production
+- **Auto-HTTPS** with Caddy
 - **Security headers** (HSTS, XSS protection, etc.)
 - **Rate limiting** for API endpoints
 - **CORS configuration** for frontend integration
@@ -203,15 +206,42 @@ make logs-ssl
 
 ---
 
-## 📊 Monitoring & Debugging
+## 📊 Monitoring & Health Checks
 
-### Built-in Monitoring
-| Service | Purpose | Access |
-|---------|---------|--------|
-| **Flower** | Celery task monitoring | `:5555` |
-| **pgAdmin** | Database management | `:5050` (dev/staging) |
-| **Sentry** | Error tracking | Configure SENTRY_DSN |
-| **Health Check** | Service status | `/health/` |
+### Comprehensive Monitoring Stack
+| Service | Purpose | Status | Access |
+|---------|---------|--------|--------|
+| **Sentry** | Error tracking & APM | Ready to activate | Configure SENTRY_DSN |
+| **Health Endpoint** | Service status | Built-in | `/health/` |
+| **Health Scripts** | System validation | Automated | `make health-prod` |
+| **Flower** | Celery monitoring | Secure access | SSH tunnel required |
+| **pgAdmin** | Database management | Dev/staging | `:5050/:5051` |
+| **Caddy Logs** | Access logs | JSON format | `make logs-caddy` |
+| **DO Monitoring** | VPS metrics | Automatic | Dashboard |
+
+### Quick Health Check
+```bash
+# Application health
+curl https://yourdomain.com/health/
+
+# Comprehensive check
+make health-prod
+
+# Docker containers
+make docker-health-prod
+```
+
+### Sentry Setup (Error Tracking)
+```bash
+# 1. Create project at https://sentry.io
+# 2. Add DSN to .env files:
+SENTRY_DSN=https://your-dsn@sentry.io/project-id
+
+# 3. Restart services
+make restart-prod
+```
+
+**📊 [Full Monitoring Guide](./MONITORING.md) - Complete monitoring setup & best practices**
 
 ### Debug Commands
 ```bash
@@ -219,7 +249,7 @@ make logs-ssl
 make logs              # All services
 make logs-backend      # Django backend only
 make logs-celery       # Celery tasks only
-make logs-ssl          # SSL certificates
+make caddy-logs        # Caddy proxy logs
 
 # Container status
 docker ps              # Running containers
@@ -244,15 +274,15 @@ Choose the best strategy for your deployment:
 
 ```bash
 # Set in .env file:
-STATIC_FILES_HANDLER=nginx     # VPS with Nginx (recommended)
+STATIC_FILES_HANDLER=caddy      # VPS with Caddy (recommended)
 STATIC_FILES_HANDLER=whitenoise # cPanel/shared hosting
-STATIC_FILES_HANDLER=s3        # AWS S3 + CloudFront
+STATIC_FILES_HANDLER=s3         # AWS S3 + CloudFront
 ```
 
 ### Strategy Comparison
 | Strategy | Best For | Performance | Setup |
 |----------|----------|-------------|-------|
-| **Nginx** | VPS/Cloud | ⭐⭐⭐ | Easy |
+| **Caddy** | VPS/Cloud | ⭐⭐⭐ | Easy |
 | **WhiteNoise** | Shared hosting | ⭐⭐ | Easiest |
 | **AWS S3** | High traffic | ⭐⭐⭐ | Complex |
 
@@ -276,9 +306,9 @@ ALLOWED_HOSTS=domain.com,www.domain.com
 DATABASE_URL=postgresql://user:pass@host:5432/db
 
 # Static Files
-STATIC_FILES_HANDLER=nginx|whitenoise|s3
+STATIC_FILES_HANDLER=caddy|whitenoise|s3
 
-# SSL
+# SSL (Auto with Caddy)
 DOMAIN=yourdomain.com
 SSL_EMAIL=admin@yourdomain.com
 
@@ -328,9 +358,10 @@ bp/
 │   ├── apps/                 # Your Django apps
 │   ├── requirements.txt      # Python dependencies
 │   └── Dockerfile           # Backend container
-├── nginx/                    # Nginx configuration
-│   ├── default.conf         # Nginx config
-│   └── Dockerfile           # Nginx container
+├── caddy/                    # Caddy configuration
+│   ├── Caddyfile            # Development config
+│   ├── Caddyfile.prod       # Production config (Auto-SSL)
+│   └── Dockerfile           # Caddy container
 ├── docker-compose.yml        # Development services
 ├── docker-compose.prod.yml   # Production services
 ├── docker-compose.staging.yml # Staging services
@@ -353,17 +384,17 @@ bp/
 
 ### Traditional Hosting
 - **Shared Hosting** - cPanel with WhiteNoise
-- **VPS** - Full Docker stack
+- **VPS** - Full Docker stack with Caddy
 - **Dedicated Server** - Maximum performance
 
 ### Recommended Production Stack
 ```
 🌐 Domain + DNS (Cloudflare)
-🔒 SSL (Let's Encrypt via Certbot)
+🔒 SSL (Auto with Caddy)
 🖥️  VPS (DigitalOcean Droplet)
 🐳 Docker + Docker Compose
 🗄️  Managed PostgreSQL (DigitalOcean)
-📦 Static Files (Nginx or S3)
+📦 Static Files (Caddy or S3)
 📊 Monitoring (Sentry + Flower)
 ```
 
@@ -397,9 +428,10 @@ services:
 
 ## 📚 Documentation
 
-- **[QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
-- **[SERVICES.md](./SERVICES.md)** - Detailed services documentation
-- **[SSL-SETUP.md](./SSL-SETUP.md)** - SSL configuration guide
+- **[🚀 QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
+- **[🔧 SERVICES.md](./SERVICES.md)** - Detailed services documentation  
+- **[📊 MONITORING.md](./MONITORING.md)** - Complete monitoring & health checks guide
+- **[🔐 DATABASE_ACCESS.md](./DATABASE_ACCESS.md)** - Secure database & monitoring access
 
 ---
 

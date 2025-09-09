@@ -102,11 +102,18 @@ make migrate-staging
 make createsuperuser-staging
 ```
 
-### 6. Test Et ✅
+### 6. SSL Otomatik Alınıyor! 🔐
+
+Caddy otomatik Let's Encrypt SSL sertifikası alacak. DNS doğru ayarlandıysa 1-2 dakika içinde HTTPS aktif olur.
+
+### 7. Test Et ✅
 
 ```bash
-# HTTPS test (test sertifikası):
-curl -k https://staging.yourdomain.com
+# HTTP (Caddy otomatik HTTPS'e yönlendirir):
+curl http://staging.yourdomain.com
+
+# HTTPS test:
+curl https://staging.yourdomain.com/api/
 
 # Monitoring:
 # pgAdmin: http://VPS_IP:5051
@@ -117,14 +124,14 @@ curl -k https://staging.yourdomain.com
 
 ---
 
-## 🚀 Production (15 dakita)
+## 🚀 Production (15 dakika)
 
 **Ne için:** Canlı sistem, gerçek kullanıcılar
 
 ### 1. VPS + Database Seçimi
 
 ```bash
-# 1. Ubuntu VPS kur
+# 1. Ubuntu VPS kur (önerilen: 2GB+ RAM)
 # 2. Database seçimi:
 #    Option A: DigitalOcean/AWS'de managed PostgreSQL oluştur
 #    Option B: Container PostgreSQL kullan (basit)
@@ -152,6 +159,7 @@ cp .env.prod.example .env.prod
 ```bash
 # Domain'i VPS'e yönlendir:
 # yourdomain.com -> VPS_IP_ADDRESS
+# www.yourdomain.com -> VPS_IP_ADDRESS (opsiyonel)
 ```
 
 ### 4. Production Deploy
@@ -168,19 +176,25 @@ make createsuperuser-prod
 make collectstatic-prod
 ```
 
-### 5. HTTPS Aktifleştir
+### 5. SSL Otomatik! 🔐
 
-```bash
-# SSL sertifikası otomatik alınır, HTTPS yönlendir:
-make ssl-enable-https
-make restart-prod
-```
+Caddy otomatik olarak:
+- ✅ Let's Encrypt SSL sertifikası alır
+- ✅ HTTP'den HTTPS'e yönlendirir  
+- ✅ Sertifikaları otomatik yeniler
+- ✅ Security header'ları ekler
+
+**Hiçbir SSL kurulumu gerekmez!**
 
 ### 6. Test Et ✅
 
 ```bash
 # Production test:
 curl https://yourdomain.com/api/
+
+# SSL test:
+curl -I https://yourdomain.com
+# "strict-transport-security" header görmeli
 
 # Monitoring:
 # Admin: https://yourdomain.com/admin/
@@ -210,13 +224,7 @@ curl https://yourdomain.com/api/
 ```bash
 # Projeyi zip olarak indir ve cPanel File Manager ile public_html'e yükle
 # veya SSH varsa:
-# Eğer zaten passenger_wsgi.py varsa sil (çakışmasın diye):
-rm -f passenger_wsgi.py
-
-# Git repository'i hazırla:
-git init
-git remote add origin https://github.com/weboloper/bp
-git pull origin main
+git clone https://github.com/weboloper/bp.git .
 ```
 
 ### 3. MySQL Database Oluştur
@@ -263,7 +271,15 @@ python backend/manage.py collectstatic --noinput
 python backend/manage.py createsuperuser
 ```
 
-### 7. Test Et ✅
+### 7. SSL (cPanel)
+
+```bash
+# cPanel > SSL/TLS > Let's Encrypt
+# - Domain seçin ve "Issue" butonuna tıklayın
+# Otomatik SSL sertifikası kurulur
+```
+
+### 8. Test Et ✅
 
 ```bash
 # Site testi:
@@ -277,7 +293,7 @@ https://yourdomain.com/api/
 - **MySQL:** Shared hosting database
 - **Passenger WSGI:** cPanel'in Python app sistemi
 - **Minimal Resources:** Redis/Celery yok (shared hosting limiti)
-- **SSL:** cPanel Let's Encrypt ile otomatik
+- **SSL:** cPanel Let's Encrypt ile manual
 
 ### cPanel vs VPS Karşılaştırması:
 
@@ -289,6 +305,7 @@ cPanel (Shared):     VPS (Docker):
 ❌ Redis yok         ✅ Redis + Celery
 ❌ Celery yok        ✅ Background tasks
 ❌ Limited resources ✅ Scalable
+✅ Manual SSL        ✅ Otomatik SSL
 ```
 
 **🎉 cPanel hazır! Shared hosting'de çalışıyor!**
@@ -303,7 +320,7 @@ cPanel (Shared):     VPS (Docker):
 ✅ Django Backend      (http://localhost:8000)
 ✅ PostgreSQL          (localhost:5432)
 ✅ Redis               (localhost:6379)
-✅ Nginx               (http://localhost:80)
+✅ Caddy Reverse Proxy (http://localhost:80)
 ✅ pgAdmin             (http://localhost:5050)
 ✅ Flower              (http://localhost:5555)
 ✅ Celery Worker
@@ -313,28 +330,28 @@ cPanel (Shared):     VPS (Docker):
 ### Staging
 
 ```
-✅ Django Backend      (https://staging.domain.com)
+✅ Django Backend      (internal:8000)
 ✅ PostgreSQL          (container)
-✅ Redis               (container)
-✅ Nginx + SSL         (https)
+✅ Redis               (container)  
+✅ Caddy + Auto SSL    (https://staging.domain.com)
 ✅ pgAdmin             (http://IP:5051)
 ✅ Flower              (http://IP:5556)
 ✅ Celery Worker
 ✅ Celery Beat
-✅ Certbot SSL         (otomatik yenileme)
+✅ Let's Encrypt SSL   (otomatik)
 ```
 
 ### Production
 
 ```
-✅ Django Backend      (https://yourdomain.com)
+✅ Django Backend      (internal:8000)
 ✅ External PostgreSQL (managed)
 ✅ Redis               (container)
-✅ Nginx + SSL         (https)
+✅ Caddy + Auto SSL    (https://yourdomain.com)
 ✅ Flower              (http://IP:5555 - authenticated)
 ✅ Celery Worker
 ✅ Celery Beat
-✅ Certbot SSL         (otomatik yenileme)
+✅ Let's Encrypt SSL   (otomatik + yenileme)
 ❌ pgAdmin             (güvenlik için kapalı)
 ```
 
@@ -344,9 +361,11 @@ cPanel (Shared):     VPS (Docker):
 ✅ Django Backend      (https://yourdomain.com)
 ✅ MySQL Database      (shared)
 ✅ WhiteNoise          (static files)
+✅ Let's Encrypt SSL   (cPanel manual)
 ❌ Redis               (shared hosting limiti)
 ❌ Celery              (shared hosting limiti)
 ❌ Monitoring          (shared hosting limiti)
+❌ Reverse Proxy       (shared hosting limiti)
 ```
 
 ---
@@ -362,6 +381,9 @@ docker ps
 # Logları kontrol et
 make logs
 
+# Caddy logları
+make logs-caddy
+
 # Servisleri yeniden başlat
 make down && make up
 ```
@@ -372,7 +394,8 @@ make down && make up
 
 ```bash
 make down
-# Başka servisleri durdur
+# Port 80/443 başka servis kullanıyor mu?
+sudo netstat -tlnp | grep :80
 make up
 ```
 
@@ -386,8 +409,21 @@ make logs-backend
 **SSL sertifikası alınamıyor:**
 
 ```bash
-make logs-ssl
-# DNS doğru yönlendirildi mi kontrol et
+make logs-caddy
+# Kontrol et:
+# 1. DNS doğru yönlendirildi mi?
+# 2. Port 80/443 açık mı?
+# 3. Domain doğru mu?
+```
+
+**Static files çalışmıyor:**
+
+```bash
+# Collectstatic yap
+make collectstatic
+
+# Caddy static mount kontrol et
+docker exec -it caddy_container ls -la /static/
 ```
 
 ---
@@ -419,12 +455,12 @@ make logs-ssl
 
 ## 🎯 Özet
 
-| Ortam           | Setup Süresi | Kullanım         | Maliyet  |
-| --------------- | ------------ | ---------------- | -------- |
-| **Development** | 5 dk         | Yerel geliştirme | Ücretsiz |
-| **Staging**     | 10 dk        | Demo & Test      | ~$5/ay   |
-| **Production**  | 15 dk        | Canlı sistem     | ~$20/ay  |
-| **cPanel**      | 20 dk        | Shared hosting   | ~$5/ay   |
+| Ortam           | Setup Süresi | SSL          | Kullanım         | Maliyet  |
+| --------------- | ------------ | ------------ | ---------------- | -------- |
+| **Development** | 5 dk         | HTTP         | Yerel geliştirme | Ücretsiz |
+| **Staging**     | 10 dk        | Otomatik SSL | Demo & Test      | ~$5/ay   |
+| **Production**  | 15 dk        | Otomatik SSL | Canlı sistem     | ~$20/ay  |
+| **cPanel**      | 20 dk        | Manual SSL   | Shared hosting   | ~$5/ay   |
 
 **Herhangi bir sorun yaşarsan: [SERVICES.md](./SERVICES.md) detaylı rehberine bak!**
 
