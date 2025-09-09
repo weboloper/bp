@@ -41,7 +41,7 @@ services:
       - .env.staging
     volumes:
       - ./backend:/app
-      - static_staging_volume:/app/static
+      - static_staging_volume:/app/staticfiles
       - media_staging_volume:/app/media
     expose:
       - "8000"
