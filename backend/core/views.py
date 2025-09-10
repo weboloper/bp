@@ -6,6 +6,7 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.utils import timezone
+from core.utils import DateUtils
 import sys
 import platform
 
@@ -15,9 +16,12 @@ def health_check(request):
     Health check endpoint for monitoring
     Returns system status and basic info
     """
+    local_time = DateUtils.get_local_time()
+    
     health_data = {
         'status': 'healthy',
-        'timestamp': timezone.now().isoformat(),
+        'timestamp': local_time.isoformat(),
+        'timezone': settings.TIME_ZONE,
         'environment': getattr(settings, 'CURRENT_ENV', 'unknown'),
         'debug': settings.DEBUG,
         'python_version': platform.python_version(),
@@ -32,11 +36,13 @@ def home(request):
     Home page view
     Simple welcome page for the application
     """
+    local_time = DateUtils.get_local_time()
+    
     context = {
         'title': 'BP Django-Caddy Application',
         'environment': getattr(settings, 'CURRENT_ENV', 'development'),
         'debug': settings.DEBUG,
-        'timestamp': timezone.now(),
+        'timestamp': local_time,
     }
     
     # If it's an API request or JSON is preferred
@@ -145,6 +151,8 @@ def api_root(request):
     API root endpoint
     Lists available API endpoints
     """
+    local_time = DateUtils.get_local_time()
+    
     api_info = {
         'message': 'BP Django-Caddy API',
         'version': '1.0.0',
@@ -153,7 +161,8 @@ def api_root(request):
             'admin': '/admin/',
             'auth': '/auth/',
         },
-        'timestamp': timezone.now().isoformat(),
+        'timestamp': local_time.isoformat(),
+        'timezone': settings.TIME_ZONE,
     }
     
     return JsonResponse(api_info)

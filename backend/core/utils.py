@@ -12,8 +12,10 @@ from django.utils.text import slugify
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
+from django.conf import settings
 from PIL import Image
 import hashlib
+import pytz
 
 
 class TextUtils:
@@ -169,6 +171,13 @@ class DateUtils:
     """Date and time utilities"""
     
     @staticmethod
+    def get_local_time():
+        """Get current time in local timezone (Turkey)"""
+        utc_now = timezone.now()
+        local_tz = pytz.timezone(getattr(settings, 'TIME_ZONE', 'Europe/Istanbul'))
+        return utc_now.astimezone(local_tz)
+    
+    @staticmethod
     def time_ago(date) -> str:
         """Get human readable time ago string"""
         now = timezone.now()
@@ -195,5 +204,5 @@ class DateUtils:
     def is_business_hours(check_time=None) -> bool:
         """Check if given time is within business hours (9-18)"""
         if check_time is None:
-            check_time = timezone.now()
+            check_time = DateUtils.get_local_time()  # Local time kullan
         return 9 <= check_time.hour < 18 and check_time.weekday() < 5
