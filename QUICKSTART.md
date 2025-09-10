@@ -43,18 +43,6 @@ make migrate # Database oluştur
 make createsuperuser  # Admin kullanıcısı
 ```
 
-### 4. Test Et ✅
-
-```bash
-# API test:
-curl http://localhost/api/
-
-# Admin: http://localhost/admin/
-# pgAdmin: http://localhost:5050 (admin@bp.local / admin123)
-# Flower: http://localhost:5555
-```
-
-**🎉 Development hazır! Kodlamaya başlayabilirsin.**
 
 ---
 
@@ -66,7 +54,30 @@ curl http://localhost/api/
 
 ```bash
 # Ubuntu VPS'e bağlan
-sudo apt update && sudo apt install docker.io docker-compose git
+# Önce sistemini güncelle
+sudo apt update && sudo apt upgrade -y
+sudo apt install make
+
+# Docker'ın resmi GPG anahtarını ekle
+sudo apt install ca-certificates curl gnupg lsb-release
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# Docker repository'sini ekle
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Docker Engine'i kur (modern docker compose dahil)
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+# Docker'ı başlat ve otomatik başlaması için ayarla
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Kullanıcını docker grubuna ekle (sudo kullanmadan docker komutları için)
+sudo usermod -aG docker $USER
 ```
 
 ### 2. Projeyi Deploy Et
@@ -224,7 +235,9 @@ curl -I https://yourdomain.com
 ```bash
 # Projeyi zip olarak indir ve cPanel File Manager ile public_html'e yükle
 # veya SSH varsa:
-git clone https://github.com/weboloper/bp.git .
+git rm -rf passenger_wsgi.py
+git init
+git add remote origin clone https://github.com/weboloper/bp.git
 ```
 
 ### 3. MySQL Database Oluştur
