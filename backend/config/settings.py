@@ -22,6 +22,7 @@ env = environ.Env(
     DEBUG=(bool, True),
     SECRET_KEY=(str, 'django-insecure-change-this-in-production'),
     DATABASE_URL=(str, ''),
+    USE_ASYNC_EMAIL=(bool, False),
 )
 
 # Environment setup - Docker vs cPanel with multi-env support
@@ -356,6 +357,24 @@ if SENTRY_DSN and not DEBUG:
         environment=CURRENT_ENV,
         release=env('APP_VERSION', default='1.0.0'),
     )
+
+# Email Configuration
+USE_ASYNC_EMAIL = env('USE_ASYNC_EMAIL')
+
+# Email backend configuration
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+# Email Settings (Universal - works with any SMTP provider)
+EMAIL_HOST = env('EMAIL_HOST', default='localhost')
+EMAIL_PORT = env('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+
+# Console backend for development
+if DEBUG and not EMAIL_HOST_USER:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 if CURRENT_ENV == 'staging':
     # Staging specific settings
