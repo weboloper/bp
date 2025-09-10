@@ -113,6 +113,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'core',
+    'accounts',
     
 ]
 
@@ -271,6 +272,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
+
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -336,6 +340,9 @@ if not DEBUG:
 
 # Environment-specific settings
 CURRENT_ENV = env('DJANGO_ENV', default='development')
+
+# Frontend URL Configuration
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
 
 # Sentry Configuration
 SENTRY_DSN = env('SENTRY_DSN', default=None)

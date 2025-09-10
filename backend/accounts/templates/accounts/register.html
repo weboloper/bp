@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}Kayıt Ol - BP Django App{% endblock %}
+
+{% block header %}Kayıt Ol{% endblock %}
+
+{% block content %}
+<h2>Yeni Hesap Oluştur</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div>
+        <label for="username">Kullanıcı Adı:</label>
+        <input type="text" 
+               id="username" 
+               name="username" 
+               value="{{ username }}" 
+               maxlength="30" 
+               required>
+        {% if errors.username %}
+            <div class="error">{{ errors.username }}</div>
+        {% endif %}
+        <small>Sadece harf, rakam, alt çizgi (_) ve tire (-) kullanabilirsiniz</small>
+    </div>
+
+    <div>
+        <label for="email">Email:</label>
+        <input type="email" 
+               id="email" 
+               name="email" 
+               value="{{ email }}" 
+               maxlength="254" 
+               required>
+        {% if errors.email %}
+            <div class="error">{{ errors.email }}</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="password1">Şifre:</label>
+        <input type="password" 
+               id="password1" 
+               name="password1" 
+               minlength="8" 
+               maxlength="128" 
+               required>
+        {% if errors.password1 %}
+            <div class="error">{{ errors.password1 }}</div>
+        {% endif %}
+        <small>En az 8 karakter olmalıdır</small>
+    </div>
+
+    <div>
+        <label for="password2">Şifre Tekrarı:</label>
+        <input type="password" 
+               id="password2" 
+               name="password2" 
+               minlength="8" 
+               maxlength="128" 
+               required>
+        {% if errors.password2 %}
+            <div class="error">{{ errors.password2 }}</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <button type="submit">Kayıt Ol</button>
+    </div>
+</form>
+
+<div>
+    <p>Zaten hesabınız var mı? <a href="/accounts/login/">Giriş yapın</a></p>
+</div>
+{% endblock %}

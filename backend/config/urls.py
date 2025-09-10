@@ -29,6 +29,9 @@ urlpatterns = [
     path('health/', health_check, name='health_check'),
     path('api/', api_root, name='api_root'),
     
+    # App URLs
+    path('accounts/', include('accounts.urls')),
+    
     # API endpoints (add your app URLs here)
     # path('api/v1/', include('your_app.urls')),
 ]

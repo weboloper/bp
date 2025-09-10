@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BP Django App{% endblock %}</title>
+</head>
+<body>
+    <header>
+        <h1>{% block header %}BP Django App{% endblock %}</h1>
+        <nav>
+            <a href="/">Ana Sayfa</a>
+            <a href="/accounts/register/">Kayıt Ol</a>
+            <a href="/accounts/login/">Giriş Yap</a>
+        </nav>
+    </header>
+
+    <main>
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2024 BP Django App</p>
+    </footer>
+</body>
+</html>
