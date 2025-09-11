@@ -10,8 +10,13 @@
         <h1>{% block header %}BP Django App{% endblock %}</h1>
         <nav>
             <a href="/">Ana Sayfa</a>
-            <a href="/accounts/register/">Kayıt Ol</a>
-            <a href="/accounts/login/">Giriş Yap</a>
+            {% if user.is_authenticated %}
+                <a href="{% url 'accounts:profile' %}">Profil ({{ user.username }})</a>
+                <a href="{% url 'accounts:logout' %}">Çıkış Yap</a>
+            {% else %}
+                <a href="{% url 'accounts:register' %}">Kayıt Ol</a>
+                <a href="{% url 'accounts:login' %}">Giriş Yap</a>
+            {% endif %}
         </nav>
     </header>
 

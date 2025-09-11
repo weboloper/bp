@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Giriş Yap - BP Django App{% endblock %}
+
+{% block header %}Giriş Yap{% endblock %}
+
+{% block content %}
+<h2>Hesabınıza Giriş Yapın</h2>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div>
+        <label for="login_field">Email veya Kullanıcı Adı:</label>
+        <input type="text" 
+               id="login_field" 
+               name="login_field" 
+               value="{{ login_field }}" 
+               maxlength="254" 
+               required>
+        {% if errors.login_field %}
+            <div class="error">{{ errors.login_field }}</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <label for="password">Şifre:</label>
+        <input type="password" 
+               id="password" 
+               name="password" 
+               required>
+        {% if errors.password %}
+            <div class="error">{{ errors.password }}</div>
+        {% endif %}
+    </div>
+
+    <div>
+        <button type="submit">Giriş Yap</button>
+    </div>
+</form>
+
+<div>
+    <p>Henüz hesabınız yok mu? <a href="{% url 'accounts:register' %}">Kayıt olun</a></p>
+    <p><a href="#forgot-password">Şifremi unuttum</a></p>
+</div>
+{% endblock %}

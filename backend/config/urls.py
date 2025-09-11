@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from core.views import home, health_check, api_root
+from core.views import home, health_check, api_root, test_email
 
 urlpatterns = [
     # Admin panel
@@ -27,6 +27,7 @@ urlpatterns = [
     # Core endpoints
     path('', home, name='home'),
     path('health/', health_check, name='health_check'),
+    path('test-email/', test_email, name='test_email'),
     path('api/', api_root, name='api_root'),
     
     # App URLs

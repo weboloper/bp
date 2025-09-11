@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block title %}Email Test - BP Django App{% endblock %}
+
+{% block header %}Email Servis Testi{% endblock %}
+
+{% block content %}
+<h2>Email Service Test</h2>
+
+<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+    <h3>Sistem Bilgileri</h3>
+    <p><strong>Environment:</strong> {{ current_env }}</p>
+    <p><strong>Frontend URL:</strong> {{ frontend_url }}</p>
+    <p><strong>Async Email:</strong> {{ use_async_email|yesno:"Açık,Kapalı" }}</p>
+    
+    <hr style="margin: 15px 0;">
+    
+    <h4>📧 Email Backend Konfigürasyonu</h4>
+    <p><strong>Backend:</strong> 
+        {% if 'console' in email_backend %}
+            <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
+            <br><small style="color: #856404;">⚠️ Email'ler console'da görünecek (terminal/logs)</small>
+        {% elif 'smtp' in email_backend %}
+            <span style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
+            <br><small style="color: #0c5460;">✉️ Email'ler SMTP ile gönderilecek</small>
+        {% else %}
+            <span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
+            <br><small style="color: #721c24;">❓ Bilinmeyen email backend</small>
+        {% endif %}
+    </p>
+    
+    {% if 'console' not in email_backend %}
+        <p><strong>Email Host:</strong> {{ email_host }}</p>
+        <p><strong>Email User:</strong> {{ email_host_user }}</p>
+    {% endif %}
+    
+    {% if 'console' in email_backend %}
+        <div style="background: #d4edda; padding: 10px; border-radius: 5px; margin-top: 10px;">
+            <strong>🔍 Console Email Backend:</strong><br>
+            <small>Email'ler gönderilmeyecek, sadece console'da (terminal/logs) görünecek.</small><br>
+            <small>Development için mükemmel - gerçek email gönderimi yapmaz.</small>
+        </div>
+    {% endif %}
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div>
+        <label for="email_type">Email Tipi:</label>
+        <select id="email_type" name="email_type" required>
+            <option value="">Seçiniz</option>
+            <option value="smart">Smart Email</option>
+            <option value="critical">Critical Email</option>
+        </select>
+    </div>
+
+    <div>
+        <label for="recipient_email">Alıcı Email:</label>
+        <input type="email" 
+               id="recipient_email" 
+               name="recipient_email" 
+               placeholder="test@example.com"
+               required>
+    </div>
+
+    <div>
+        <label for="template_name">Template:</label>
+        <select id="template_name" name="template_name" required>
+            <option value="">Template seçiniz</option>
+            {% for template in available_templates %}
+                <option value="{{ template }}">{{ template }}</option>
+            {% endfor %}
+        </select>
+        <small>Veya manuel template path giriniz:</small>
+        <input type="text" 
+               name="template_name_manual" 
+               placeholder="core/emails/test"
+               onchange="if(this.value) document.getElementById('template_name').value = this.value">
+    </div>
+
+    <div>
+        <button type="submit">Email Gönder</button>
+    </div>
+</form>
+
+<div style="margin-top: 30px; background: #fff3cd; padding: 15px; border-radius: 5px;">
+    <h3>Test Email Açıklaması</h3>
+    <p><strong>Smart Email:</strong> Settings'e göre sync veya async gönderilir.</p>
+    <p><strong>Critical Email:</strong> Her zaman sync (senkron) gönderilir.</p>
+    
+    <h4>Test Context Data:</h4>
+    <ul>
+        <li><code>user.username</code>: test_user</li>
+        <li><code>user.email</code>: girilen email</li>
+        <li><code>user.first_name</code>: Test</li>
+        <li><code>site_url</code>: {{ frontend_url }}</li>
+        <li><code>test_data</code>: Bu bir test emailidir</li>
+    </ul>
+</div>
+
+<div style="margin-top: 20px;">
+    <h3>🔗 Linkler</h3>
+    <a href="/" style="margin-right: 10px;">← Ana Sayfa</a>
+    <a href="/health/" style="margin-right: 10px;">Health Check</a>
+    <a href="/admin/">Admin Panel</a>
+</div>
+{% endblock %}
