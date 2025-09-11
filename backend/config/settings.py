@@ -114,6 +114,7 @@ INSTALLED_APPS = [
     # Local apps
     'core',
     'accounts',
+    'pages',
     
 ]
 
@@ -346,24 +347,24 @@ FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
 
 # Sentry Configuration
 SENTRY_DSN = env('SENTRY_DSN', default=None)
-if SENTRY_DSN and not DEBUG:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.celery import CeleryIntegration
-    from sentry_sdk.integrations.redis import RedisIntegration
+# if SENTRY_DSN and not DEBUG:
+#     import sentry_sdk
+#     from sentry_sdk.integrations.django import DjangoIntegration
+#     from sentry_sdk.integrations.celery import CeleryIntegration
+#     from sentry_sdk.integrations.redis import RedisIntegration
     
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(auto_enabling=True),
-            CeleryIntegration(auto_enabling=True),
-            RedisIntegration(),
-        ],
-        traces_sample_rate=0.1,
-        send_default_pii=True,
-        environment=CURRENT_ENV,
-        release=env('APP_VERSION', default='1.0.0'),
-    )
+#     sentry_sdk.init(
+#         dsn=SENTRY_DSN,
+#         integrations=[
+#             DjangoIntegration(auto_enabling=True),
+#             CeleryIntegration(auto_enabling=True),
+#             RedisIntegration(),
+#         ],
+#         traces_sample_rate=0.1,
+#         send_default_pii=True,
+#         environment=CURRENT_ENV,
+#         release=env('APP_VERSION', default='1.0.0'),
+#     )
 
 # Email Configuration
 USE_ASYNC_EMAIL = env('USE_ASYNC_EMAIL')

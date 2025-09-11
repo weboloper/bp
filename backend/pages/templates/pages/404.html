@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block title %}Sayfa Bulunamadı - 404{% endblock %}
+
+{% block content %}
+<div>
+    <h1>404 - Sayfa Bulunamadı</h1>
+    
+    <p><strong>{{ requested_path }}</strong> adresinde bir sayfa bulunamadı.</p>
+    
+    {% if similar_pages %}
+        <h2>Benzer Sayfalar</h2>
+        <ul>
+            {% for page in similar_pages %}
+                <li>
+                    <a href="{% url 'pages:detail' slug=page.slug %}">{{ page.title }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>Aradığınız sayfa mevcut değil.</p>
+    {% endif %}
+    
+    <h2>Yararlı Linkler</h2>
+    <ul>
+        <li><a href="/">Ana Sayfa</a></li>
+        <li><a href="{% url 'pages:list' %}">Tüm Sayfalar</a></li>
+        <li><a href="{% url 'pages:search' %}">Sayfa Arama</a></li>
+    </ul>
+    
+    <p>
+        <a href="javascript:history.back()">← Geri Dön</a>
+    </p>
+</div>
+{% endblock %}

@@ -20,6 +20,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from core.views import home, health_check, api_root, test_email
 
+# Custom error handlers
+handler404 = 'pages.handlers.custom_404_handler'
+
 urlpatterns = [
     # Admin panel
     path('admin/', admin.site.urls),
@@ -35,6 +38,9 @@ urlpatterns = [
     
     # API endpoints (add your app URLs here)
     # path('api/v1/', include('your_app.urls')),
+    
+    # Pages app - FALLBACK (en sonda olmalı)
+    path('', include('pages.urls')),
 ]
 
 # Media dosyalar sadece development'ta Django'dan serve edilir
