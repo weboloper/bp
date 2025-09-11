@@ -8,6 +8,9 @@ from django.core.exceptions import ValidationError
 from accounts.models import User
 from accounts.utils import validate_alphanumeric_username
 from core.email_service import EmailService
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 
 def register_view(request):
     if request.method == 'POST':
@@ -184,3 +187,120 @@ def logout_view(request):
         messages.success(request, f'Hoşçakal {username}! Başarıyla çıkış yaptınız.')
     
     return redirect('home')
+
+def password_reset_view(request):
+    """Şifremi unuttum formu"""
+    if request.method == 'POST':
+        errors = {}
+        email = request.POST.get('email', '').strip()
+        
+        # Email validation
+        if not email:
+            errors['email'] = 'Email adresi gerekli'
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errors['email'] = 'Geçerli bir email adresi giriniz'
+        
+        if not errors:
+            try:
+                user = User.objects.get(email=email)
+                
+                # Generate reset token
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                # Create reset link
+                reset_link = f"{settings.FRONTEND_URL}/accounts/password-reset-confirm/{uid}/{token}/"
+                
+                # Send password reset email
+                try:
+                    EmailService.send_critical_email(
+                        template_name='accounts/emails/password_reset',
+                        context={
+                            'user': user,
+                            'reset_link': reset_link,
+                            'site_url': settings.FRONTEND_URL,
+                        },
+                        subject='Şifre Sıfırlama Talebi - BP Django App',
+                        recipient_list=[user.email]
+                    )
+                    
+                    messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
+                    return redirect('home')
+                    
+                except Exception as e:
+                    print(f"Password reset email failed: {e}")
+                    errors['email'] = 'Email gönderimi başarısız. Lütfen tekrar deneyin.'
+                    
+            except User.DoesNotExist:
+                # Security: Don't reveal if email exists
+                messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
+                return redirect('home')
+        
+        return render(request, 'accounts/password_reset.html', {
+            'errors': errors,
+            'email': email
+        })
+    
+    return render(request, 'accounts/password_reset.html')
+
+def password_reset_confirm_view(request, uidb64, token):
+    """Email'den gelen link ile şifre sıfırlama"""
+    try:
+        # Decode user ID
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    # Check if token is valid
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            errors = {}
+            password1 = request.POST.get('password1', '')
+            password2 = request.POST.get('password2', '')
+            
+            # Password validation
+            if not password1:
+                errors['password1'] = 'Yeni şifre gerekli'
+            
+            if not password2:
+                errors['password2'] = 'Şifre tekrarı gerekli'
+            elif password1 != password2:
+                errors['password2'] = 'Şifreler eşleşmiyor'
+            
+            # Django password validation
+            if password1:
+                try:
+                    validate_password(password1, user)
+                except ValidationError as e:
+                    errors['password1'] = ' '.join(e.messages)
+            
+            if not errors:
+                # Set new password
+                user.set_password(password1)
+                user.save()
+                
+                messages.success(request, 'Şifreniz başarıyla değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.')
+                return redirect('accounts:login')
+            
+            return render(request, 'accounts/password_reset_confirm.html', {
+                'errors': errors,
+                'validlink': True,
+                'uidb64': uidb64,
+                'token': token
+            })
+        
+        # GET request with valid token
+        return render(request, 'accounts/password_reset_confirm.html', {
+            'validlink': True,
+            'uidb64': uidb64,
+            'token': token
+        })
+    else:
+        # Invalid token
+        return render(request, 'accounts/password_reset_confirm.html', {
+            'validlink': False
+        })

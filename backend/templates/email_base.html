@@ -4,29 +4,92 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block email_title %}BP Django App{% endblock %}</title>
+    <style>
+        /* Email-safe CSS */
+        .email-container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+        .email-header { background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #dee2e6; }
+        .email-content { padding: 30px 20px; }
+        .email-footer { background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 12px; }
+        
+        /* Content styling */
+        .content-title { color: #343a40; margin: 0 0 15px 0; font-size: 24px; }
+        .content-subtitle { color: #6c757d; margin: 0 0 20px 0; font-size: 16px; }
+        .content-text { color: #495057; line-height: 1.6; margin: 15px 0; }
+        
+        /* Alert boxes */
+        .alert-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .alert-warning { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .alert-danger { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        .alert-info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 15px; border-radius: 5px; margin: 20px 0; }
+        
+        /* Buttons */
+        .btn { display: inline-block; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-warning { background-color: #ffc107; color: #212529; }
+        
+        /* Utility classes */
+        .text-center { text-align: center; }
+        .text-left { text-align: left; }
+        .text-right { text-align: right; }
+        .mb-10 { margin-bottom: 10px; }
+        .mb-15 { margin-bottom: 15px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mb-30 { margin-bottom: 30px; }
+        .mt-10 { margin-top: 10px; }
+        .mt-15 { margin-top: 15px; }
+        .mt-20 { margin-top: 20px; }
+        .mt-30 { margin-top: 30px; }
+        
+        /* Table styling for data */
+        .data-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .data-table td { padding: 8px 0; border-bottom: 1px solid #dee2e6; }
+        .data-table .label { color: #6c757d; font-weight: bold; width: 40%; }
+        .data-table .value { color: #343a40; }
+        
+        /* Link styling */
+        .link-primary { color: #007bff; text-decoration: none; }
+        .link-secondary { color: #6c757d; text-decoration: none; }
+        
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-container { width: 100% !important; }
+            .email-content { padding: 20px 15px !important; }
+            .btn { width: 100% !important; display: block !important; }
+        }
+    </style>
 </head>
 <body>
-    <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+    <div class="email-container">
         <!-- Header -->
-        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-bottom: 1px solid #dee2e6;">
+        <div class="email-header">
+            <!-- Logo -->
+            <div style="margin-bottom: 15px;">
+                <img src="{% load static %}{% static 'img/logo.svg' %}" 
+                     alt="BP Django App" 
+                     width="200" 
+                     height="40" 
+                     style="max-width: 200px; height: auto; display: block; margin: 0 auto;">
+            </div>
             <h1 style="margin: 0; color: #343a40;">{% block email_header %}BP Django App{% endblock %}</h1>
         </div>
 
         <!-- Content -->
-        <div style="padding: 30px 20px;">
+        <div class="email-content">
             {% block email_content %}
             {% endblock %}
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #dee2e6; color: #6c757d; font-size: 12px;">
+        <div class="email-footer">
             <p style="margin: 0;">
                 Bu email BP Django App tarafından gönderilmiştir.<br>
                 © 2024 BP Django App. Tüm hakları saklıdır.
             </p>
             <p style="margin: 10px 0 0 0;">
-                <a href="#" style="color: #6c757d; text-decoration: none;">Abonelikten Çık</a> |
-                <a href="#" style="color: #6c757d; text-decoration: none;">İletişim</a>
+                <a href="#" class="link-secondary">Abonelikten Çık</a> |
+                <a href="#" class="link-secondary">İletişim</a>
             </p>
         </div>
     </div>
