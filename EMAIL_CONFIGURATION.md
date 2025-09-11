@@ -93,9 +93,9 @@ Ortama göre otomatik olarak sync/async karar verir:
 ```python
 from core.email_service import EmailService
 
-# Normal email - settings'e göre sync/async
+# Welcome email - app-based template path
 EmailService.send_smart_email(
-    template_name='welcome',
+    template_name='accounts/emails/welcome',
     context={'user': user, 'site_name': 'MyProject'},
     subject='Hoş geldiniz!',
     recipient_list=[user.email]
@@ -108,7 +108,7 @@ Verification, password reset gibi kritik emailler için:
 ```python
 # Critical email - her zaman senkron gönderilir
 EmailService.send_critical_email(
-    template_name='email_verification',
+    template_name='accounts/emails/verification',
     context={
         'user': user,
         'verification_link': verification_url
@@ -124,7 +124,7 @@ Normal email'i senkron göndermeye zorlamak için:
 ```python
 # Force sync - özel durumlar için
 EmailService.send_smart_email(
-    template_name='order_confirmation',
+    template_name='orders/emails/confirmation',
     context={'order': order, 'user': user},
     subject='Sipariş onaylandı',
     recipient_list=[user.email],
@@ -147,7 +147,7 @@ EmailService.send_smart_email(
 ```python
 # ✅ Normal - async olabilir (önerilir)
 EmailService.send_smart_email(
-    template_name='newsletter',
+    template_name='marketing/emails/newsletter',
     context={'articles': articles},
     subject='Haftalık bülten',
     recipient_list=subscribers
@@ -155,7 +155,7 @@ EmailService.send_smart_email(
 
 # ⚡ Force Sync - kullanıcı bekliyor
 EmailService.send_smart_email(
-    template_name='download_link',
+    template_name='downloads/emails/ready',
     context={'file_url': download_url},
     subject='Dosyanız hazır',
     recipient_list=[user.email],
@@ -212,7 +212,7 @@ def register_user(request):
     
     # Welcome email - non-critical, can be async
     EmailService.send_smart_email(
-        template_name='registration_welcome',
+        template_name='accounts/emails/welcome',
         context={
             'user': user,
             'username': user.username,
@@ -229,7 +229,7 @@ def register_user(request):
 def send_verification_email(request):
     # Verification email - critical, must be sync
     EmailService.send_critical_email(
-        template_name='email_verification',
+        template_name='accounts/emails/verification',
         context={
             'user': request.user,
             'verification_link': verification_url,
@@ -246,7 +246,7 @@ def send_verification_email(request):
 def password_reset(request):
     # Password reset - critical, must be sync
     EmailService.send_critical_email(
-        template_name='password_reset',
+        template_name='accounts/emails/password_reset',
         context={
             'user': user,
             'reset_link': reset_url,
@@ -263,7 +263,7 @@ def password_reset(request):
 def complete_order(request):
     # Order confirmation - user expects immediate email
     EmailService.send_smart_email(
-        template_name='order_confirmation',
+        template_name='orders/emails/confirmation',
         context={
             'order': order,
             'user': user,
@@ -282,7 +282,7 @@ def complete_order(request):
 def send_newsletter(request):
     # Newsletter - can be async, not urgent
     EmailService.send_smart_email(
-        template_name='newsletter',
+        template_name='marketing/emails/newsletter',
         context={
             'articles': latest_articles,
             'unsubscribe_link': unsubscribe_url
@@ -295,16 +295,57 @@ def send_newsletter(request):
 
 ## Template Structure
 
-Email template'leri `templates/emails/` klasöründe saklanır:
+Email template'leri her app'in kendi template klasöründe saklanır (App-based):
 
 ```
+# App-based Template Structure (Recommended for Boilerplate)
+accounts/
+└── templates/
+    └── accounts/
+        └── emails/
+            ├── welcome.html           # Welcome email
+            ├── verification.html      # Email verification  
+            └── password_reset.html    # Password reset
+
+orders/
+└── templates/
+    └── orders/
+        └── emails/
+            ├── confirmation.html      # Order confirmation
+            └── shipped.html           # Shipment notification
+
+marketing/
+└── templates/
+    └── marketing/
+        └── emails/
+            ├── newsletter.html        # Newsletter
+            └── promotion.html         # Promotional email
+
+# Global email base template
 templates/
-└── emails/
-    ├── base_email.html           # Base template
-    ├── registration_welcome.html # Welcome email
-    ├── email_verification.html   # Email verification
-    ├── password_reset.html       # Password reset
-    └── newsletter.html          # Newsletter template
+└── email_base.html                   # Base email template
+```
+
+### Template Path Examples:
+```python
+# App-based paths (Recommended)
+'accounts/emails/welcome'           # accounts/templates/accounts/emails/welcome.html
+'accounts/emails/verification'      # accounts/templates/accounts/emails/verification.html
+'orders/emails/confirmation'        # orders/templates/orders/emails/confirmation.html
+'marketing/emails/newsletter'       # marketing/templates/marketing/emails/newsletter.html
+```
+
+### Template Inheritance:
+```html
+<!-- accounts/templates/accounts/emails/welcome.html -->
+{% extends 'email_base.html' %}
+
+{% block email_title %}Hoş Geldiniz!{% endblock %}
+
+{% block email_content %}
+<h2>Merhaba {{ user.username }}!</h2>
+<p>Platformumuza hoş geldiniz...</p>
+{% endblock %}
 ```
 
 ## Provider Setup Guide
