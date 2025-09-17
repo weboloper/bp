@@ -61,21 +61,25 @@ def home(request):
 
 def api_root(request):
     """
-    API root endpoint
-    Lists available API endpoints
+    API root endpoint - Basit yapı
+    Mevcut endpoint'leri listeler
     """
-    local_time = DateUtils.get_local_time()
-    
     api_info = {
-        'message': 'BP Django-Caddy API',
+        'message': 'BP Django API',
         'version': '1.0.0',
-        'endpoints': {
-            'health': '/health/',
-            'admin': '/admin/',
-            'auth': '/auth/',
+        'timestamp': timezone.now().isoformat(),
+        'available_endpoints': {
+            'accounts': {
+                'login': '/api/accounts/auth/login/',
+                'token_refresh': '/api/accounts/auth/token/refresh/',
+                'token_verify': '/api/accounts/auth/token/verify/',
+            },
+            'system': {
+                'health': '/health/',
+                'admin': '/admin/',
+            }
         },
-        'timestamp': local_time.isoformat(),
-        'timezone': settings.TIME_ZONE,
+        'note': 'Simple and clean API structure'
     }
     
     return JsonResponse(api_info)

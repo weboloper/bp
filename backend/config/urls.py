@@ -31,13 +31,16 @@ urlpatterns = [
     path('', home, name='home'),
     path('health/', health_check, name='health_check'),
     path('test-email/', test_email, name='test_email'),
-    path('api/', api_root, name='api_root'),
+   
     
     # App URLs
     path('accounts/', include('accounts.urls')),
     
-    # API endpoints (add your app URLs here)
-    # path('api/v1/', include('your_app.urls')),
+    # API endpoints
+    path("api/", include([
+        path('', api_root, name='api_root'),
+        path('accounts/', include('accounts.api.urls')),
+    ])),
     
     # Pages app - FALLBACK (en sonda olmalı)
     path('', include('pages.urls')),
