@@ -43,6 +43,7 @@ def home(request):
     context = {
         'title': 'BP Django-Caddy Application',
         'environment': getattr(settings, 'CURRENT_ENV', 'development'),
+        'static_handler': getattr(settings, 'STATIC_FILES_HANDLER', '--'),
         'debug': settings.DEBUG,
         'timestamp': local_time,
     }
@@ -127,7 +128,9 @@ def home(request):
             <div class="info">
                 <strong>Ortam:</strong> {context['environment'].title()}<br>
                 <strong>Debug Modu:</strong> {'Açık' if context['debug'] else 'Kapalı'}<br>
+                <strong>static_handler:</strong>{context['static_handler'].title()}<br>
                 <strong>Zaman:</strong> {context['timestamp'].strftime('%d.%m.%Y %H:%M:%S')}
+                
             </div>
             
             <div class="links">

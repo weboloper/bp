@@ -7,6 +7,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from accounts.models import User
 from accounts.utils import validate_alphanumeric_username
+from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordChangeForm
 from core.email_service import EmailService
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -14,86 +15,37 @@ from django.utils.encoding import force_bytes, force_str
 
 def register_view(request):
     if request.method == 'POST':
-        errors = {}
+        form = UserRegistrationForm(request.POST)
         
-        # Form data
-        username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
-        password1 = request.POST.get('password1', '')
-        password2 = request.POST.get('password2', '')
-        
-        # Username validation
-        if not username:
-            errors['username'] = 'Kullanıcı adı gerekli'
-        elif len(username) < 3:
-            errors['username'] = 'Kullanıcı adı en az 3 karakter olmalı'
-        elif len(username) > 30:
-            errors['username'] = 'Kullanıcı adı en fazla 30 karakter olabilir'
-        else:
+        if form.is_valid():
             try:
-                validate_alphanumeric_username(username)
-            except ValidationError as e:
-                errors['username'] = str(e.message)
-            
-            # Check if username exists
-            if User.objects.filter(username=username).exists():
-                errors['username'] = 'Bu kullanıcı adı zaten alınmış'
+                user = form.save()
                 
-        # Email validation using Django's built-in validator
-        if not email:
-            errors['email'] = 'Email gerekli'
-        else:
-            try:
-                validate_email(email)
-            except ValidationError:
-                errors['email'] = 'Geçerli bir email adresi giriniz'
-            
-            # Check if email exists
-            if User.objects.filter(email=email).exists():
-                errors['email'] = 'Bu email adresi zaten kayıtlı'
-            
-        # Password confirmation validation
-        if not password1:
-            errors['password1'] = 'Şifre gerekli'
-        
-        if not password2:
-            errors['password2'] = 'Şifre tekrarı gerekli'
-        elif password1 != password2:
-            errors['password2'] = 'Şifreler eşleşmiyor'
-            
-        # Password validation using Django's built-in validators
-        if password1:
-            try:
-                validate_password(password1)
-            except ValidationError as e:
-                errors['password1'] = ' '.join(e.messages)
-            
-        # If no errors, create user
-        if not errors:
-            try:
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password1
-                )
+                # Generate email verification token
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
-                # Send welcome email
+                # Create verification link
+                verification_link = f"{settings.FRONTEND_URL}/accounts/email-verify/{uid}/{token}/"
+                
+                # Send verification email
                 try:
-                    EmailService.send_smart_email(
-                        template_name='accounts/emails/welcome',
+                    EmailService.send_critical_email(
+                        template_name='accounts/emails/email_verification',
                         context={
                             'user': user,
+                            'verification_link': verification_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Hoş geldiniz! - BP Django App',
+                        subject='Email Doğrulama - BP Django App',
                         recipient_list=[user.email]
                     )
+                    
+                    messages.success(request, 'Kayıt başarılı! Email adresinize doğrulama linki gönderildi.')
                 except Exception as e:
-                    # Log error but don't fail registration
-                    print(f"Welcome email failed: {e}")
+                    print(f"Email verification email failed: {e}")
+                    messages.warning(request, 'Kayıt başarılı ama email gönderiminde sorun oluştu. Giriş yapmayı deneyin.')
                 
-                messages.success(request, 'Kayıt başarılı! Hoş geldin emaili gönderildi.')
-                # return redirect('accounts:login')
                 return render(request, 'accounts/register.html')
                     
             except Exception as e:
@@ -101,9 +53,9 @@ def register_view(request):
         
         # Return errors
         return render(request, 'accounts/register.html', {
-            'errors': errors,
-            'username': username,
-            'email': email
+            'errors': form.errors,
+            'username': request.POST.get('username', ''),
+            'email': request.POST.get('email', '')
         })
     
     # GET request
@@ -148,6 +100,14 @@ def login_view(request):
             # Check authentication result
             if user is not None:
                 if user.is_active:
+                    if not user.is_verified:
+                        messages.warning(request, 'Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
+                        return render(request, 'accounts/login.html', {
+                            'errors': {},
+                            'login_field': login_field,
+                            'show_verification_link': True
+                        })
+                    
                     login(request, user)
                     messages.success(request, f'Hoş geldin {user.username}!')
                     
@@ -191,22 +151,12 @@ def logout_view(request):
 def password_reset_view(request):
     """Şifremi unuttum formu"""
     if request.method == 'POST':
-        errors = {}
-        email = request.POST.get('email', '').strip()
+        form = PasswordResetForm(request.POST)
         
-        # Email validation
-        if not email:
-            errors['email'] = 'Email adresi gerekli'
-        else:
-            try:
-                validate_email(email)
-            except ValidationError:
-                errors['email'] = 'Geçerli bir email adresi giriniz'
-        
-        if not errors:
-            try:
-                user = User.objects.get(email=email)
-                
+        if form.is_valid():
+            user = form.get_user()
+            
+            if user:
                 # Generate reset token
                 token = default_token_generator.make_token(user)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
@@ -232,16 +182,15 @@ def password_reset_view(request):
                     
                 except Exception as e:
                     print(f"Password reset email failed: {e}")
-                    errors['email'] = 'Email gönderimi başarısız. Lütfen tekrar deneyin.'
-                    
-            except User.DoesNotExist:
+                    form.add_error('email', 'Email gönderimi başarısız. Lütfen tekrar deneyin.')
+            else:
                 # Security: Don't reveal if email exists
                 messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
                 return redirect('home')
         
         return render(request, 'accounts/password_reset.html', {
-            'errors': errors,
-            'email': email
+            'errors': form.errors,
+            'email': request.POST.get('email', '')
         })
     
     return render(request, 'accounts/password_reset.html')
@@ -258,36 +207,15 @@ def password_reset_confirm_view(request, uidb64, token):
     # Check if token is valid
     if user is not None and default_token_generator.check_token(user, token):
         if request.method == 'POST':
-            errors = {}
-            password1 = request.POST.get('password1', '')
-            password2 = request.POST.get('password2', '')
+            form = PasswordResetConfirmForm(user, request.POST)
             
-            # Password validation
-            if not password1:
-                errors['password1'] = 'Yeni şifre gerekli'
-            
-            if not password2:
-                errors['password2'] = 'Şifre tekrarı gerekli'
-            elif password1 != password2:
-                errors['password2'] = 'Şifreler eşleşmiyor'
-            
-            # Django password validation
-            if password1:
-                try:
-                    validate_password(password1, user)
-                except ValidationError as e:
-                    errors['password1'] = ' '.join(e.messages)
-            
-            if not errors:
-                # Set new password
-                user.set_password(password1)
-                user.save()
-                
+            if form.is_valid():
+                form.save()
                 messages.success(request, 'Şifreniz başarıyla değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.')
                 return redirect('accounts:login')
             
             return render(request, 'accounts/password_reset_confirm.html', {
-                'errors': errors,
+                'errors': form.errors,
                 'validlink': True,
                 'uidb64': uidb64,
                 'token': token
@@ -304,3 +232,121 @@ def password_reset_confirm_view(request, uidb64, token):
         return render(request, 'accounts/password_reset_confirm.html', {
             'validlink': False
         })
+
+def email_verification_confirm_view(request, uidb64, token):
+    """Email doğrulama linki ile hesap doğrulama"""
+    try:
+        # Decode user ID
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    # Check if token is valid
+    if user is not None and default_token_generator.check_token(user, token):
+        # Verify user
+        if not user.is_verified:
+            user.is_verified = True
+            user.save()
+            
+            # Send welcome email after verification
+            try:
+                EmailService.send_smart_email(
+                    template_name='accounts/emails/welcome',
+                    context={
+                        'user': user,
+                        'site_url': settings.FRONTEND_URL,
+                    },
+                    subject='Hoş geldiniz! - BP Django App',
+                    recipient_list=[user.email]
+                )
+            except Exception as e:
+                print(f"Welcome email failed: {e}")
+            
+            messages.success(request, f'Email adresiniz doğrulandı! Hoş geldin {user.username}!')
+        else:
+            messages.info(request, 'Email adresiniz zaten doğrulanmış.')
+        
+        return render(request, 'accounts/email_verification_confirm.html', {
+            'validlink': True
+        })
+    else:
+        # Invalid token
+        return render(request, 'accounts/email_verification_confirm.html', {
+            'validlink': False
+        })
+
+def email_verification_resend_view(request):
+    """Email doğrulama yeniden gönderme formu"""
+    if request.method == 'POST':
+        form = EmailVerificationResendForm(request.POST)
+        
+        if form.is_valid():
+            user = form.get_user()
+            
+            if user:
+                if user.is_verified:
+                    messages.info(request, 'Bu email adresi zaten doğrulanmış.')
+                    return redirect('accounts:login')
+                
+                # Generate verification token
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                # Create verification link
+                verification_link = f"{settings.FRONTEND_URL}/accounts/email-verify/{uid}/{token}/"
+                
+                # Send verification email
+                try:
+                    EmailService.send_critical_email(
+                        template_name='accounts/emails/email_verification',
+                        context={
+                            'user': user,
+                            'verification_link': verification_link,
+                            'site_url': settings.FRONTEND_URL,
+                        },
+                        subject='Email Doğrulama - BP Django App',
+                        recipient_list=[user.email]
+                    )
+                    
+                    messages.success(request, 'Email doğrulama linki gönderildi.')
+                    return redirect('accounts:login')
+                    
+                except Exception as e:
+                    print(f"Email verification resend failed: {e}")
+                    form.add_error('email', 'Email gönderimi başarısız. Lütfen tekrar deneyin.')
+            else:
+                # Security: Don't reveal if email exists
+                messages.success(request, 'Eğer bu email adresi kayıtlıysa, doğrulama linki gönderildi.')
+                return redirect('accounts:login')
+        
+        return render(request, 'accounts/email_verification_resend.html', {
+            'errors': form.errors,
+            'email': request.POST.get('email', '')
+        })
+    
+    return render(request, 'accounts/email_verification_resend.html')
+
+def password_change_view(request):
+    """Login olan kullanıcının şifre değiştirme formu"""
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        
+        if form.is_valid():
+            form.save()
+            
+            # Update session to keep user logged in after password change
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, request.user)
+            
+            messages.success(request, 'Şifreniz başarıyla değiştirildi.')
+            return redirect('accounts:profile')
+        
+        return render(request, 'accounts/password_change.html', {
+            'errors': form.errors
+        })
+    
+    return render(request, 'accounts/password_change.html')

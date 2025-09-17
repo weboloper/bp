@@ -9,7 +9,7 @@ import os
 
 def validate_alphanumeric_username(value):
     """Alphanumeric username validator (letters, numbers, underscore, dash)"""
-    if not re.match(r'^[a-zA-Z0-9_-]+', value):
+    if not re.match(r'^[a-zA-Z0-9_-]+$', value):
         raise ValidationError(_('Username can only contain letters, numbers, underscore and dash.'))
 
 def validate_image_extension(value):

@@ -19,7 +19,7 @@
                maxlength="30" 
                required>
         {% if errors.username %}
-            <div class="error">{{ errors.username }}</div>
+            <div >{{ errors.username }}</div>
         {% endif %}
         <small>Sadece harf, rakam, alt çizgi (_) ve tire (-) kullanabilirsiniz</small>
     </div>
@@ -33,7 +33,7 @@
                maxlength="254" 
                required>
         {% if errors.email %}
-            <div class="error">{{ errors.email }}</div>
+            <div >{{ errors.email }}</div>
         {% endif %}
     </div>
 
@@ -46,7 +46,7 @@
                maxlength="128" 
                required>
         {% if errors.password1 %}
-            <div class="error">{{ errors.password1 }}</div>
+            <div >{{ errors.password1 }}</div>
         {% endif %}
         <small>En az 8 karakter olmalıdır</small>
     </div>
@@ -60,7 +60,7 @@
                maxlength="128" 
                required>
         {% if errors.password2 %}
-            <div class="error">{{ errors.password2 }}</div>
+            <div >{{ errors.password2 }}</div>
         {% endif %}
     </div>
 
@@ -70,6 +70,7 @@
 </form>
 
 <div>
-    <p>Zaten hesabınız var mı? <a href="/accounts/login/">Giriş yapın</a></p>
+    <p>Zaten hesabınız var mı? <a href="{% url 'accounts:login' %}">Giriş yapın</a></p>
+    <p><a href="{% url 'accounts:email_verification_resend' %}">Email doğrulama linki gönder</a> (Kayıt emaili almadınız mı?)</p>
 </div>
 {% endblock %}

@@ -12,4 +12,11 @@ urlpatterns = [
     # password urls
     path('password-reset/', views.password_reset_view, name='password_reset'),
     path('password-reset-confirm/<uidb64>/<token>/', views.password_reset_confirm_view, name='password_reset_confirm'),
+    
+    # email verification urls
+    path('email-verify/<uidb64>/<token>/', views.email_verification_confirm_view, name='email_verification_confirm'),
+    path('email-verify-resend/', views.email_verification_resend_view, name='email_verification_resend'),
+    
+    # password change url
+    path('password-change/', views.password_change_view, name='password_change'),
 ]
