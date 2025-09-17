@@ -1,0 +1,90 @@
+{% extends 'accounts/base_public.html' %}
+
+{% block main_content %}
+<div class="auth-card">
+    <h2>Kayıt Ol</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="username">Kullanıcı Adı</label>
+            <input type="text" id="username" name="username" value="{{ username }}" maxlength="30" required>
+            {% if errors.username %}
+                <div class="error">
+                    {% for error in errors.username %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <small>3-30 karakter, sadece harf, rakam, alt çizgi (_) ve tire (-)</small>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ email }}" required>
+            {% if errors.email %}
+                <div class="error">
+                    {% for error in errors.email %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="first_name">Ad (İsteğe bağlı)</label>
+            <input type="text" id="first_name" name="first_name" value="{{ first_name }}" maxlength="30">
+            {% if errors.first_name %}
+                <div class="error">
+                    {% for error in errors.first_name %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="last_name">Soyad (İsteğe bağlı)</label>
+            <input type="text" id="last_name" name="last_name" value="{{ last_name }}" maxlength="30">
+            {% if errors.last_name %}
+                <div class="error">
+                    {% for error in errors.last_name %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="password1">Şifre</label>
+            <input type="password" id="password1" name="password1" required>
+            {% if errors.password1 %}
+                <div class="error">
+                    {% for error in errors.password1 %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="password2">Şifre Tekrar</label>
+            <input type="password" id="password2" name="password2" required>
+            {% if errors.password2 %}
+                <div class="error">
+                    {% for error in errors.password2 %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Kayıt Ol</button>
+    </form>
+
+    <div class="auth-links">
+        <a href="{% url 'accounts:login' %}">Zaten hesabın var mı? Giriş yap</a>
+    </div>
+</div>
+{% endblock %}

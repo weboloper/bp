@@ -1,0 +1,42 @@
+{% extends 'accounts/base_public.html' %}
+
+{% block main_content %}
+<div class="auth-card">
+    <h2>Giriş Yap</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="username">Kullanıcı Adı veya Email</label>
+            <input type="text" id="username" name="username" value="{{ username }}" required>
+            {% if errors.username %}
+                <div class="error">
+                    {% for error in errors.username %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="password">Şifre</label>
+            <input type="password" id="password" name="password" required>
+            {% if errors.password %}
+                <div class="error">
+                    {% for error in errors.password %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary">Giriş Yap</button>
+    </form>
+
+    <div class="auth-links">
+        <a href="{% url 'accounts:register' %}">Hesabın yok mu? Kayıt ol</a>
+        <a href="{% url 'accounts:password_reset' %}">Şifremi unuttum</a>
+    </div>
+</div>
+{% endblock %}

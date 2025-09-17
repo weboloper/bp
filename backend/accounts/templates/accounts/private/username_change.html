@@ -1,0 +1,58 @@
+{% extends 'accounts/base_authenticated.html' %}
+
+{% block main_content %}
+<div class="form-container">
+    <div class="form-card">
+        <h2>Kullanıcı Adı Değiştir</h2>
+        
+        <div class="info-alert">
+            <strong>📝 Mevcut Kullanıcı Adı:</strong> {{ user.username }}
+        </div>
+
+        <div class="warning-alert">
+            <strong>⚠️ Önemli:</strong>
+            <ul>
+                <li>Güvenlik için mevcut şifreniz gerekli</li>
+                <li>Kullanıcı adı değiştikten sonra giriş yaparken yeni adı kullanın</li>
+                <li>Bu işlem geri alınamaz</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="current_password">Mevcut Şifre</label>
+                <input type="password" id="current_password" name="current_password" required>
+                {% if errors.current_password %}
+                    <div class="error">
+                        {% for error in errors.current_password %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small>Güvenlik için mevcut şifrenizi girin</small>
+            </div>
+
+            <div class="form-group">
+                <label for="new_username">Yeni Kullanıcı Adı</label>
+                <input type="text" id="new_username" name="new_username" 
+                       value="{{ new_username }}" maxlength="30" required>
+                {% if errors.new_username %}
+                    <div class="error">
+                        {% for error in errors.new_username %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small>3-30 karakter, sadece harf, rakam, alt çizgi (_) ve tire (-)</small>
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">← Geri</a>
+                <button type="submit" class="btn btn-warning">Kullanıcı Adı Değiştir</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

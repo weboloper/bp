@@ -1,0 +1,56 @@
+{% extends 'accounts/base_authenticated.html' %}
+
+{% block main_content %}
+<div class="form-container">
+    <div class="form-card">
+        <h2>Email Değiştir</h2>
+        
+        <div class="info-alert">
+            <strong>📧 Mevcut Email:</strong> {{ user.email }}
+        </div>
+
+        <div class="warning-alert">
+            <strong>⚠️ Önemli:</strong>
+            <ul>
+                <li>Mevcut şifreniz gerekli</li>
+                <li>Yeni email adresinize doğrulama linki gönderilecek</li>
+                <li>Eski email adresinize bilgilendirme gönderilecek</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="current_password">Mevcut Şifre</label>
+                <input type="password" id="current_password" name="current_password" required>
+                {% if errors.current_password %}
+                    <div class="error">
+                        {% for error in errors.current_password %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <small>Güvenlik için mevcut şifrenizi girin</small>
+            </div>
+
+            <div class="form-group">
+                <label for="new_email">Yeni Email Adresi</label>
+                <input type="email" id="new_email" name="new_email" value="{{ new_email }}" required>
+                {% if errors.new_email %}
+                    <div class="error">
+                        {% for error in errors.new_email %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">← Geri</a>
+                <button type="submit" class="btn btn-primary">Email Değiştirme Talebinde Bulun</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

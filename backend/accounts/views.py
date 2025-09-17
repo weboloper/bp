@@ -47,32 +47,32 @@ def register_view(request):
                     print(f"Email verification email failed: {e}")
                     messages.warning(request, 'Kayıt başarılı ama email gönderiminde sorun oluştu. Giriş yapmayı deneyin.')
                 
-                return render(request, 'accounts/register.html')
+                return render(request, 'accounts/public/register.html')
                     
             except Exception as e:
                 messages.error(request, 'Kayıt sırasında bir hata oluştu')
         
         # Return errors
-        return render(request, 'accounts/register.html', {
+        return render(request, 'accounts/public/register.html', {
             'errors': form.errors,
             'username': request.POST.get('username', ''),
             'email': request.POST.get('email', '')
         })
     
     # GET request
-    return render(request, 'accounts/register.html')
+    return render(request, 'accounts/public/register.html')
 
 def login_view(request):
     if request.method == 'POST':
         errors = {}
         
         # Form data
-        login_field = request.POST.get('login_field', '').strip()  # Email veya username
+        username = request.POST.get('username', '').strip()  # Updated field name
         password = request.POST.get('password', '')
         
         # Basic validation
-        if not login_field:
-            errors['login_field'] = 'Email veya kullanıcı adı gerekli'
+        if not username:
+            errors['username'] = 'Email veya kullanıcı adı gerekli'
         
         if not password:
             errors['password'] = 'Şifre gerekli'
@@ -81,31 +81,31 @@ def login_view(request):
         if not errors:
             user = None
             
-            # Check if login_field is email or username
-            if '@' in login_field:
+            # Check if username is email or username
+            if '@' in username:
                 # It's an email
                 try:
-                    validate_email(login_field)
+                    validate_email(username)
                     # Find user by email
                     try:
-                        user_obj = User.objects.get(email=login_field)
+                        user_obj = User.objects.get(email=username)
                         user = authenticate(request, username=user_obj.username, password=password)
                     except User.DoesNotExist:
-                        errors['login_field'] = 'Bu email adresi ile kayıtlı kullanıcı bulunamadı'
+                        errors['username'] = 'Bu email adresi ile kayıtlı kullanıcı bulunamadı'
                 except ValidationError:
-                    errors['login_field'] = 'Geçerli bir email adresi giriniz'
+                    errors['username'] = 'Geçerli bir email adresi giriniz'
             else:
                 # It's a username
-                user = authenticate(request, username=login_field, password=password)
+                user = authenticate(request, username=username, password=password)
             
             # Check authentication result
             if user is not None:
                 if user.is_active:
                     if not user.is_verified:
                         messages.warning(request, 'Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
-                        return render(request, 'accounts/login.html', {
+                        return render(request, 'accounts/public/login.html', {
                             'errors': {},
-                            'login_field': login_field,
+                            'username': username,
                             'show_verification_link': True
                         })
                     
@@ -116,27 +116,27 @@ def login_view(request):
                     next_url = request.GET.get('next', 'accounts:profile')
                     return redirect(next_url)
                 else:
-                    errors['login_field'] = 'Hesabınız devre dışı bırakılmış'
+                    errors['username'] = 'Hesabınız devre dışı bırakılmış'
             else:
-                if '@' in login_field:
+                if '@' in username:
                     errors['password'] = 'Email veya şifre hatalı'
                 else:
                     errors['password'] = 'Kullanıcı adı veya şifre hatalı'
         
         # Return errors
-        return render(request, 'accounts/login.html', {
+        return render(request, 'accounts/public/login.html', {
             'errors': errors,
-            'login_field': login_field
+            'username': username
         })
     
     # GET request
-    return render(request, 'accounts/login.html')
+    return render(request, 'accounts/public/login.html')
 
 def profile_view(request):
     if not request.user.is_authenticated:
         return redirect('accounts:login')
     
-    return render(request, 'accounts/profile.html', {
+    return render(request, 'accounts/private/profile.html', {
         'user': request.user,
         'profile': request.user.profile
     })
@@ -189,12 +189,12 @@ def password_reset_view(request):
                 messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
                 return redirect('home')
         
-        return render(request, 'accounts/password_reset.html', {
+        return render(request, 'accounts/public/password_reset.html', {
             'errors': form.errors,
             'email': request.POST.get('email', '')
         })
     
-    return render(request, 'accounts/password_reset.html')
+    return render(request, 'accounts/public/password_reset.html')
 
 def password_reset_confirm_view(request, uidb64, token):
     """Email'den gelen link ile şifre sıfırlama"""
@@ -215,7 +215,7 @@ def password_reset_confirm_view(request, uidb64, token):
                 messages.success(request, 'Şifreniz başarıyla değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.')
                 return redirect('accounts:login')
             
-            return render(request, 'accounts/password_reset_confirm.html', {
+            return render(request, 'accounts/public/password_reset_confirm.html', {
                 'errors': form.errors,
                 'validlink': True,
                 'uidb64': uidb64,
@@ -223,14 +223,14 @@ def password_reset_confirm_view(request, uidb64, token):
             })
         
         # GET request with valid token
-        return render(request, 'accounts/password_reset_confirm.html', {
+        return render(request, 'accounts/public/password_reset_confirm.html', {
             'validlink': True,
             'uidb64': uidb64,
             'token': token
         })
     else:
         # Invalid token
-        return render(request, 'accounts/password_reset_confirm.html', {
+        return render(request, 'accounts/public/password_reset_confirm.html', {
             'validlink': False
         })
 
@@ -268,12 +268,12 @@ def email_verification_confirm_view(request, uidb64, token):
         else:
             messages.info(request, 'Email adresiniz zaten doğrulanmış.')
         
-        return render(request, 'accounts/email_verification_confirm.html', {
+        return render(request, 'accounts/public/email_verification_confirm.html', {
             'validlink': True
         })
     else:
         # Invalid token
-        return render(request, 'accounts/email_verification_confirm.html', {
+        return render(request, 'accounts/public/email_verification_confirm.html', {
             'validlink': False
         })
 
@@ -321,12 +321,12 @@ def email_verification_resend_view(request):
                 messages.success(request, 'Eğer bu email adresi kayıtlıysa, doğrulama linki gönderildi.')
                 return redirect('accounts:login')
         
-        return render(request, 'accounts/email_verification_resend.html', {
+        return render(request, 'accounts/public/email_verification_resend.html', {
             'errors': form.errors,
             'email': request.POST.get('email', '')
         })
     
-    return render(request, 'accounts/email_verification_resend.html')
+    return render(request, 'accounts/public/email_verification_resend.html')
 
 def password_change_view(request):
     """Login olan kullanıcının şifre değiştirme formu"""
@@ -346,11 +346,11 @@ def password_change_view(request):
             messages.success(request, 'Şifreniz başarıyla değiştirildi.')
             return redirect('accounts:profile')
         
-        return render(request, 'accounts/password_change.html', {
+        return render(request, 'accounts/private/password_change.html', {
             'errors': form.errors
         })
     
-    return render(request, 'accounts/password_change.html')
+    return render(request, 'accounts/private/password_change.html')
 
 def email_change_view(request):
     """Login olan kullanıcının email değiştirme formu"""
@@ -392,12 +392,12 @@ def email_change_view(request):
                 print(f"Email change confirmation email failed: {e}")
                 form.add_error('new_email', 'Email gönderimi başarısız. Lütfen tekrar deneyin.')
         
-        return render(request, 'accounts/email_change.html', {
+        return render(request, 'accounts/private/email_change.html', {
             'errors': form.errors,
             'new_email': request.POST.get('new_email', '')
         })
     
-    return render(request, 'accounts/email_change.html')
+    return render(request, 'accounts/private/email_change.html')
 
 def email_change_confirm_view(request, uidb64, token, new_email_b64):
     """Email değişiklik onay linki"""
@@ -415,7 +415,7 @@ def email_change_confirm_view(request, uidb64, token, new_email_b64):
         # Check if new email is still available
         if User.objects.filter(email__iexact=new_email).exists():
             messages.error(request, 'Bu email adresi artık kullanılıyor. Lütfen farklı bir email deneyin.')
-            return render(request, 'accounts/email_change_confirm.html', {'validlink': False})
+            return render(request, 'accounts/public/email_change_confirm.html', {'validlink': False})
         
         old_email = user.email
         
@@ -442,14 +442,14 @@ def email_change_confirm_view(request, uidb64, token, new_email_b64):
         
         messages.success(request, f'Email adresiniz başarıyla {new_email} olarak değiştirildi.')
         
-        return render(request, 'accounts/email_change_confirm.html', {
+        return render(request, 'accounts/public/email_change_confirm.html', {
             'validlink': True,
             'old_email': old_email,
             'new_email': new_email
         })
     else:
         # Invalid token
-        return render(request, 'accounts/email_change_confirm.html', {
+        return render(request, 'accounts/public/email_change_confirm.html', {
             'validlink': False
         })
 
@@ -483,7 +483,7 @@ def profile_update_view(request):
         user_form = ProfileUpdateForm(request.user)
         profile_form = ProfileDetailsForm(instance=profile)
     
-    return render(request, 'accounts/profile_update.html', {
+    return render(request, 'accounts/private/profile_update.html', {
         'user_form': user_form,
         'profile_form': profile_form
     })
@@ -507,9 +507,9 @@ def username_change_view(request):
             messages.success(request, f'Kullanıcı adınız başarıyla "{old_username}" adresinden "{request.user.username}" olarak değiştirildi.')
             return redirect('accounts:profile')
         
-        return render(request, 'accounts/username_change.html', {
+        return render(request, 'accounts/private/username_change.html', {
             'errors': form.errors,
             'new_username': request.POST.get('new_username', '')
         })
     
-    return render(request, 'accounts/username_change.html')
+    return render(request, 'accounts/private/username_change.html')

@@ -55,6 +55,8 @@ def home(request):
             'status': 'active',
             **context
         })
+
+    return render(request, 'core/home.html', context )
     
     # Return simple HTML response for now
     html_content = f"""
