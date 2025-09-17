@@ -35,7 +35,7 @@ class User(AbstractUser):
     last_name = models.CharField(max_length=30, blank=True)
     
     # Status fields
-    is_verified = models.BooleanField(default=False)
+    is_verified = models.BooleanField(default=False,verbose_name="E-posta Doğrulandı", help_text="Kullanıcının e-posta adresini doğrulayıp doğrulamadığını belirtir.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

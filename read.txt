@@ -1,0 +1,2 @@
+cpanel ve env dev = static handler = whitenoise
+aksi durumda caddy veya aws
