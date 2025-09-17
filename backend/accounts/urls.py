@@ -19,4 +19,12 @@ urlpatterns = [
     
     # password change url
     path('password-change/', views.password_change_view, name='password_change'),
+    
+    # email change urls
+    path('email-change/', views.email_change_view, name='email_change'),
+    path('email-change-confirm/<uidb64>/<token>/<new_email_b64>/', views.email_change_confirm_view, name='email_change_confirm'),
+    
+    # profile update urls
+    path('profile-update/', views.profile_update_view, name='profile_update'),
+    path('username-change/', views.username_change_view, name='username_change'),
 ]

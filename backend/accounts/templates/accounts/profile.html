@@ -82,7 +82,9 @@
 <div >
     <h3>İşlemler</h3>
     <ul>
+        <li><a href="{% url 'accounts:profile_update' %}">Profili Düzenle</a></li>
         <li><a href="{% url 'accounts:password_change' %}">Şifre Değiştir</a></li>
+        <li><a href="{% url 'accounts:email_change' %}">Email Değiştir</a></li>
         {% if not user.is_verified %}
         <li><a href="{% url 'accounts:email_verification_resend' %}">Email Doğrulama Linki Gönder</a></li>
         {% endif %}

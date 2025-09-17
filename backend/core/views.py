@@ -136,6 +136,7 @@ def home(request):
             <div class="links">
                 <h3>🔗 Linkler:</h3>
                 <a href="/admin/">🔧 Admin Panel</a>
+                <a href="/accounts/profile/">🧑🏻‍ Profile</a>
                 <a href="/health/">💚 Health Check</a>
                 <a href="/api/">📡 API Docs</a>
             </div>

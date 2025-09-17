@@ -5,9 +5,10 @@ from django.conf import settings
 from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from accounts.models import User
+from django.utils import timezone
+from accounts.models import User, Profile
 from accounts.utils import validate_alphanumeric_username
-from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordChangeForm
+from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordChangeForm, EmailChangeForm, ProfileUpdateForm, ProfileDetailsForm, UsernameChangeForm
 from core.email_service import EmailService
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -350,3 +351,165 @@ def password_change_view(request):
         })
     
     return render(request, 'accounts/password_change.html')
+
+def email_change_view(request):
+    """Login olan kullanıcının email değiştirme formu"""
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    if request.method == 'POST':
+        form = EmailChangeForm(request.user, request.POST)
+        
+        if form.is_valid():
+            new_email = form.cleaned_data['new_email']
+            
+            # Generate email change token
+            token = default_token_generator.make_token(request.user)
+            uid = urlsafe_base64_encode(force_bytes(request.user.pk))
+            
+            # Create confirmation link
+            confirmation_link = f"{settings.FRONTEND_URL}/accounts/email-change-confirm/{uid}/{token}/{urlsafe_base64_encode(force_bytes(new_email))}/"
+            
+            try:
+                # Send confirmation email to NEW email address
+                EmailService.send_critical_email(
+                    template_name='accounts/emails/email_change_confirmation',
+                    context={
+                        'user': request.user,
+                        'old_email': request.user.email,
+                        'new_email': new_email,
+                        'confirmation_link': confirmation_link,
+                        'site_url': settings.FRONTEND_URL,
+                    },
+                    subject='Email Değişikliği Onayı - BP Django App',
+                    recipient_list=[new_email]
+                )
+                
+                messages.success(request, f'Email değişiklik onayı {new_email} adresine gönderildi. Lütfen emailinizi kontrol edin.')
+                return redirect('accounts:profile')
+                
+            except Exception as e:
+                print(f"Email change confirmation email failed: {e}")
+                form.add_error('new_email', 'Email gönderimi başarısız. Lütfen tekrar deneyin.')
+        
+        return render(request, 'accounts/email_change.html', {
+            'errors': form.errors,
+            'new_email': request.POST.get('new_email', '')
+        })
+    
+    return render(request, 'accounts/email_change.html')
+
+def email_change_confirm_view(request, uidb64, token, new_email_b64):
+    """Email değişiklik onay linki"""
+    try:
+        # Decode user ID and new email
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+        new_email = force_str(urlsafe_base64_decode(new_email_b64))
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+        new_email = None
+    
+    # Check if token is valid
+    if user is not None and default_token_generator.check_token(user, token) and new_email:
+        # Check if new email is still available
+        if User.objects.filter(email__iexact=new_email).exists():
+            messages.error(request, 'Bu email adresi artık kullanılıyor. Lütfen farklı bir email deneyin.')
+            return render(request, 'accounts/email_change_confirm.html', {'validlink': False})
+        
+        old_email = user.email
+        
+        # Update user email
+        user.email = new_email
+        user.save()
+        
+        # Send notification to OLD email address
+        try:
+            EmailService.send_critical_email(
+                template_name='accounts/emails/email_change_notification',
+                context={
+                    'user': user,
+                    'old_email': old_email,
+                    'new_email': new_email,
+                    'change_date': timezone.now(),
+                    'site_url': settings.FRONTEND_URL,
+                },
+                subject='Email Adresi Değiştirildi - BP Django App',
+                recipient_list=[old_email]
+            )
+        except Exception as e:
+            print(f"Email change notification failed: {e}")
+        
+        messages.success(request, f'Email adresiniz başarıyla {new_email} olarak değiştirildi.')
+        
+        return render(request, 'accounts/email_change_confirm.html', {
+            'validlink': True,
+            'old_email': old_email,
+            'new_email': new_email
+        })
+    else:
+        # Invalid token
+        return render(request, 'accounts/email_change_confirm.html', {
+            'validlink': False
+        })
+
+def profile_update_view(request):
+    """Profil bilgilerini güncelleme"""
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    # Get or create profile
+    try:
+        profile = request.user.profile
+    except Profile.DoesNotExist:
+        profile = Profile.objects.create(
+            user=request.user,
+            birth_date=None,
+            bio='',
+            avatar=None
+        )
+    
+    if request.method == 'POST':
+        user_form = ProfileUpdateForm(request.user, request.POST)
+        profile_form = ProfileDetailsForm(request.POST, request.FILES, instance=profile)
+        
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            
+            messages.success(request, 'Profiliniz başarıyla güncellendi.')
+            return redirect('accounts:profile')
+    else:
+        user_form = ProfileUpdateForm(request.user)
+        profile_form = ProfileDetailsForm(instance=profile)
+    
+    return render(request, 'accounts/profile_update.html', {
+        'user_form': user_form,
+        'profile_form': profile_form
+    })
+
+def username_change_view(request):
+    """Kullanıcı adı değiştirme formu"""
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+    
+    if request.method == 'POST':
+        form = UsernameChangeForm(request.user, request.POST)
+        
+        if form.is_valid():
+            old_username = request.user.username
+            form.save()
+            
+            # Update session to keep user logged in after username change
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, request.user)
+            
+            messages.success(request, f'Kullanıcı adınız başarıyla "{old_username}" adresinden "{request.user.username}" olarak değiştirildi.')
+            return redirect('accounts:profile')
+        
+        return render(request, 'accounts/username_change.html', {
+            'errors': form.errors,
+            'new_username': request.POST.get('new_username', '')
+        })
+    
+    return render(request, 'accounts/username_change.html')

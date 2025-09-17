@@ -1,0 +1,52 @@
+{% extends 'email_base.html' %}
+{% load static %}
+
+{% block email_title %}Email Adresi Değiştirildi - BP Django App{% endblock %}
+
+{% block email_content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #2c3e50; font-size: 28px; margin: 0;">Email Adresi Değiştirildi</h1>
+</div>
+
+<div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+    <p style="margin: 0; color: #495057; font-size: 16px; line-height: 1.6;">Merhaba <strong>{{ user.first_name|default:user.username }}</strong>,</p>
+</div>
+
+<p style="color: #6c757d; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+    Hesabınızın email adresi başarıyla değiştirildi.
+</p>
+
+<div style="background: #d4edda; border: 1px solid #c3e6cb; padding: 15px; border-radius: 6px; margin: 25px 0;">
+    <p style="margin: 0; color: #155724; font-size: 14px;">
+        <strong>✅ Değişiklik Tamamlandı</strong><br>
+        <strong>📧 Eski Email:</strong> {{ old_email }}<br>
+        <strong>📧 Yeni Email:</strong> {{ new_email }}<br>
+        <strong>📅 Değişiklik Tarihi:</strong> {{ change_date|date:"d M Y H:i" }}
+    </p>
+</div>
+
+<div style="background: #f8d7da; border: 1px solid #f5c6cb; padding: 15px; border-radius: 6px; margin: 25px 0;">
+    <p style="margin: 0; color: #721c24; font-size: 14px;">
+        <strong>🔒 Güvenlik Uyarısı:</strong> Bu değişikliği siz yapmadıysanız, hesabınız ele geçirilmiş olabilir. Derhal şifrenizi değiştirin ve bizimle iletişime geçin.
+    </p>
+</div>
+
+<p style="color: #6c757d; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+    Bundan sonra giriş yapmak için yeni email adresinizi kullanmanız gerekir.
+</p>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="{{ site_url }}/accounts/login/" 
+       style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+        Giriş Sayfasına Git
+    </a>
+</div>
+
+<hr style="border: none; border-top: 1px solid #dee2e6; margin: 30px 0;">
+
+<div style="text-align: center;">
+    <p style="color: #6c757d; font-size: 14px; margin: 0;">
+        Güvenlik sorunuz mu var? <a href="mailto:support@{{ site_url|cut:'http://'|cut:'https://' }}" style="color: #007bff; text-decoration: none;">Destek ekibimizle iletişime geçin</a>
+    </p>
+</div>
+{% endblock %}
