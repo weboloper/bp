@@ -2,10 +2,268 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import authenticate
 from django.core.validators import validate_email
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from accounts.utils import validate_alphanumeric_username
 
 User = get_user_model()
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    """
+    User registration serializer - accounts/forms.py UserRegistrationForm'a benzer mantık
+    """
+    password1 = serializers.CharField(write_only=True, min_length=1)
+    password2 = serializers.CharField(write_only=True, min_length=1)
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+        
+    def validate_username(self, value):
+        """
+        Username validation - form'daki clean_username ile aynı
+        """
+        username = value.strip()
+        
+        if not username:
+            raise serializers.ValidationError('Kullanıcı adı gerekli')
+        
+        if len(username) < 3:
+            raise serializers.ValidationError('Kullanıcı adı en az 3 karakter olmalı')
+        
+        if len(username) > 30:
+            raise serializers.ValidationError('Kullanıcı adı en fazla 30 karakter olabilir')
+        
+        # Alphanumeric validation
+        try:
+            validate_alphanumeric_username(username)
+        except ValidationError as e:
+            raise serializers.ValidationError(str(e.message))
+        
+        # Check if username exists
+        if User.objects.filter(username=username).exists():
+            raise serializers.ValidationError('Bu kullanıcı adı zaten alınmış')
+        
+        return username
+    
+    def validate_email(self, value):
+        """
+        Email validation - form'daki clean_email ile aynı
+        """
+        email = value.strip()
+        
+        if not email:
+            raise serializers.ValidationError('Email gerekli')
+        
+        # Django's built-in email validation
+        try:
+            validate_email(email)
+        except ValidationError:
+            raise serializers.ValidationError('Geçerli bir email adresi giriniz')
+        
+        # Check if email exists
+        if User.objects.filter(email=email).exists():
+            raise serializers.ValidationError('Bu email adresi zaten kayıtlı')
+        
+        return email
+    
+    def validate_password1(self, value):
+        """
+        Password validation - form'daki clean_password1 ile aynı
+        """
+        password1 = value
+        
+        if not password1:
+            raise serializers.ValidationError('Şifre gerekli')
+        
+        return password1
+    
+    def validate_password2(self, value):
+        """
+        Password confirmation validation
+        """
+        password2 = value
+        
+        if not password2:
+            raise serializers.ValidationError('Şifre tekrarı gerekli')
+        
+        return password2
+    
+    def validate(self, attrs):
+        """
+        Cross-field validation - form'daki clean ile aynı
+        """
+        password1 = attrs.get('password1')
+        password2 = attrs.get('password2')
+        username = attrs.get('username')
+        email = attrs.get('email')
+        
+        if password1 and password2:
+            if password1 != password2:
+                raise serializers.ValidationError({
+                    'password2': 'Şifreler eşleşmiyor'
+                })
+        
+        # Django's password validation with user context
+        if password1 and username and email:
+            # Create temporary user for validation (not saved)
+            temp_user = User(
+                username=username,
+                email=email
+            )
+            
+            try:
+                validate_password(password1, temp_user)
+            except ValidationError as e:
+                raise serializers.ValidationError({
+                    'password1': ' '.join(e.messages)
+                })
+        
+        return attrs
+    
+    def create(self, validated_data):
+        """
+        Create user - form'daki save ile aynı mantık
+        """
+        # Remove password2, we don't need it
+        validated_data.pop('password2')
+        password = validated_data.pop('password1')
+        
+        # Create user
+        user = User.objects.create_user(
+            password=password,
+            **validated_data
+        )
+        
+        return user
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    """
+    Password reset request serializer - accounts/forms.py PasswordResetForm'a benzer mantık
+    """
+    email = serializers.EmailField(required=True)
+    
+    def validate_email(self, value):
+        """
+        Email validation - form'daki clean_email ile aynı
+        """
+        email = value.strip()
+        
+        if not email:
+            raise serializers.ValidationError('Email adresi gerekli')
+        
+        # Django's built-in email validation (already handled by EmailField)
+        return email
+    
+    def get_user(self):
+        """
+        Email ile kullanıcıyı getir, yoksa None döndür - form'daki get_user ile aynı
+        """
+        email = self.validated_data.get('email')
+        try:
+            return User.objects.get(email=email)
+        except User.DoesNotExist:
+            return None
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    Password reset confirm serializer - accounts/forms.py PasswordResetConfirmForm'a benzer mantık
+    """
+    password1 = serializers.CharField(write_only=True, min_length=1)
+    password2 = serializers.CharField(write_only=True, min_length=1)
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def validate_password1(self, value):
+        """
+        Password validation - form'daki clean_password1 ile aynı
+        """
+        password1 = value
+        
+        if not password1:
+            raise serializers.ValidationError('Yeni şifre gerekli')
+        
+        # Django's built-in password validation with user context
+        if self.user:
+            try:
+                validate_password(password1, self.user)
+            except ValidationError as e:
+                raise serializers.ValidationError(' '.join(e.messages))
+        
+        return password1
+    
+    def validate_password2(self, value):
+        """
+        Password confirmation validation
+        """
+        password2 = value
+        
+        if not password2:
+            raise serializers.ValidationError('Şifre tekrarı gerekli')
+        
+        return password2
+    
+    def validate(self, attrs):
+        """
+        Cross-field validation - form'daki clean ile aynı
+        """
+        password1 = attrs.get('password1')
+        password2 = attrs.get('password2')
+        
+        if password1 and password2:
+            if password1 != password2:
+                raise serializers.ValidationError({
+                    'password2': 'Şifreler eşleşmiyor'
+                })
+        
+        return attrs
+    
+    def save(self):
+        """
+        Kullanıcının şifresini güncelle - form'daki save ile aynı
+        """
+        if not self.user:
+            raise serializers.ValidationError('User not provided')
+        
+        password = self.validated_data['password1']
+        self.user.set_password(password)
+        self.user.save()
+        return self.user
+
+
+class EmailVerificationResendSerializer(serializers.Serializer):
+    """
+    Email verification resend serializer - accounts/forms.py EmailVerificationResendForm'a benzer mantık
+    """
+    email = serializers.EmailField(required=True)
+    
+    def validate_email(self, value):
+        """
+        Email validation - form'daki clean_email ile aynı
+        """
+        email = value.strip()
+        
+        if not email:
+            raise serializers.ValidationError('Email adresi gerekli')
+        
+        # Django's built-in email validation (already handled by EmailField)
+        return email
+    
+    def get_user(self):
+        """
+        Email ile kullanıcıyı getir, yoksa None döndür - form'daki get_user ile aynı
+        """
+        email = self.validated_data.get('email')
+        try:
+            return User.objects.get(email=email)
+        except User.DoesNotExist:
+            return None
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -74,18 +332,5 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }
-        
-        # Add user info to response (optional)
-        if hasattr(refresh, 'access_token'):
-            data.update({
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'is_verified': user.is_verified,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name,
-                }
-            })
         
         return data
