@@ -23,7 +23,6 @@ User = get_user_model()
 class RegisterAPIView(APIView):
     """
     User registration endpoint
-    accounts/views.py register_view'e benzer mantık
     """
     permission_classes = [AllowAny]
     
@@ -38,7 +37,7 @@ class RegisterAPIView(APIView):
                 # Create user
                 user = serializer.save()
                 
-                # Generate email verification token - register_view ile aynı
+                # Generate email verification token
                 token = default_token_generator.make_token(user)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
@@ -57,47 +56,30 @@ class RegisterAPIView(APIView):
                         subject='Email Doğrulama - BP Django App',
                         recipient_list=[user.email]
                     )
-                    
-                    return Response({
-                        'message': 'Kayıt başarılı! Email adresinize doğrulama linki gönderildi.',
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                        },
-                        'email_sent': True
-                    }, status=status.HTTP_201_CREATED)
-                    
                 except Exception as e:
                     print(f"Email verification email failed: {e}")
-                    return Response({
-                        'message': 'Kayıt başarılı ama email gönderiminde sorun oluştu.',
-                        'user': {
-                            'id': user.id,
-                            'username': user.username,
-                            'email': user.email,
-                        },
-                        'email_sent': False,
-                        'warning': 'Email gönderimi başarısız. Giriş yapmayı deneyin.'
-                    }, status=status.HTTP_201_CREATED)
+                
+                # Return user data - DRF default success format
+                return Response({
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                }, status=status.HTTP_201_CREATED)
                 
             except Exception as e:
-                return Response({
-                    'error': 'Kayıt sırasında bir hata oluştu',
-                    'detail': str(e)
-                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                # Server error - DRF default format
+                return Response(
+                    {'detail': 'Kayıt sırasında bir hata oluştu'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
         
-        # Return validation errors
-        return Response({
-            'error': 'Validation failed',
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PasswordResetAPIView(APIView):
     """
     Password reset request endpoint
-    accounts/views.py password_reset_view'e benzer mantık
     """
     permission_classes = [AllowAny]
     
@@ -111,7 +93,7 @@ class PasswordResetAPIView(APIView):
             user = serializer.get_user()
             
             if user:
-                # Generate reset token - password_reset_view ile aynı
+                # Generate reset token
                 token = default_token_generator.make_token(user)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
@@ -130,34 +112,26 @@ class PasswordResetAPIView(APIView):
                         subject='Şifre Sıfırlama Talebi - BP Django App',
                         recipient_list=[user.email]
                     )
-                    
-                    return Response({
-                        'message': 'Şifre sıfırlama linki email adresinize gönderildi.'
-                    }, status=status.HTTP_200_OK)
-                    
                 except Exception as e:
                     print(f"Password reset email failed: {e}")
-                    return Response({
-                        'error': 'Email gönderimi başarısız. Lütfen tekrar deneyin.',
-                        'detail': str(e)
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                # Security: Don't reveal if email exists - password_reset_view ile aynı
-                return Response({
-                    'message': 'Şifre sıfırlama linki email adresinize gönderildi.'
-                }, status=status.HTTP_200_OK)
+                    return Response(
+                        {'detail': 'Email gönderimi başarısız'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            # Always return success (security) - DRF default format
+            return Response(
+                {'detail': 'Şifre sıfırlama linki email adresinize gönderildi.'}, 
+                status=status.HTTP_200_OK
+            )
         
-        # Return validation errors
-        return Response({
-            'error': 'Validation failed',
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PasswordResetConfirmAPIView(APIView):
     """
     Password reset confirm endpoint
-    accounts/views.py password_reset_confirm_view'e benzer mantık
     """
     permission_classes = [AllowAny]
     
@@ -166,14 +140,14 @@ class PasswordResetConfirmAPIView(APIView):
         Reset password with token
         """
         try:
-            # Decode user ID - password_reset_confirm_view ile aynı
+            # Decode user ID
             uid = force_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({
-                'error': 'Geçersiz sıfırlama linki',
-                'valid_link': False
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Geçersiz sıfırlama linki'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Check if token is valid
         if user is not None and default_token_generator.check_token(user, token):
@@ -183,34 +157,29 @@ class PasswordResetConfirmAPIView(APIView):
             if serializer.is_valid():
                 try:
                     serializer.save()
-                    return Response({
-                        'message': 'Şifreniz başarıyla değiştirildi. Yeni şifrenizle giriş yapabilirsiniz.',
-                        'valid_link': True
-                    }, status=status.HTTP_200_OK)
+                    return Response(
+                        {'detail': 'Şifreniz başarıyla değiştirildi'}, 
+                        status=status.HTTP_200_OK
+                    )
                 except Exception as e:
-                    return Response({
-                        'error': 'Şifre değiştirme sırasında hata oluştu',
-                        'detail': str(e)
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                    return Response(
+                        {'detail': 'Şifre değiştirme sırasında hata oluştu'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
             
-            # Validation errors
-            return Response({
-                'error': 'Validation failed',
-                'errors': serializer.errors,
-                'valid_link': True
-            }, status=status.HTTP_400_BAD_REQUEST)
+            # Return validation errors - DRF default format
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         else:
             # Invalid token
-            return Response({
-                'error': 'Sıfırlama linki geçersiz veya süresi dolmuş',
-                'valid_link': False
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Sıfırlama linki geçersiz veya süresi dolmuş'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class EmailVerificationResendAPIView(APIView):
     """
     Email verification resend endpoint
-    accounts/views.py email_verification_resend_view'e benzer mantık
     """
     permission_classes = [AllowAny]
     
@@ -225,12 +194,12 @@ class EmailVerificationResendAPIView(APIView):
             
             if user:
                 if user.is_verified:
-                    return Response({
-                        'message': 'Bu email adresi zaten doğrulanmış.',
-                        'already_verified': True
-                    }, status=status.HTTP_200_OK)
+                    return Response(
+                        {'detail': 'Bu email adresi zaten doğrulanmış'}, 
+                        status=status.HTTP_200_OK
+                    )
                 
-                # Generate verification token - email_verification_resend_view ile aynı
+                # Generate verification token
                 token = default_token_generator.make_token(user)
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
@@ -249,34 +218,26 @@ class EmailVerificationResendAPIView(APIView):
                         subject='Email Doğrulama - BP Django App',
                         recipient_list=[user.email]
                     )
-                    
-                    return Response({
-                        'message': 'Email doğrulama linki gönderildi.'
-                    }, status=status.HTTP_200_OK)
-                    
                 except Exception as e:
                     print(f"Email verification resend failed: {e}")
-                    return Response({
-                        'error': 'Email gönderimi başarısız. Lütfen tekrar deneyin.',
-                        'detail': str(e)
-                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-            else:
-                # Security: Don't reveal if email exists - email_verification_resend_view ile aynı
-                return Response({
-                    'message': 'Email doğrulama linki gönderildi.'
-                }, status=status.HTTP_200_OK)
+                    return Response(
+                        {'detail': 'Email gönderimi başarısız'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            # Always return success (security) - DRF default format
+            return Response(
+                {'detail': 'Email doğrulama linki gönderildi'}, 
+                status=status.HTTP_200_OK
+            )
         
-        # Return validation errors
-        return Response({
-            'error': 'Validation failed',
-            'errors': serializer.errors
-        }, status=status.HTTP_400_BAD_REQUEST)
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EmailVerificationConfirmAPIView(APIView):
     """
     Email verification confirm endpoint
-    accounts/views.py email_verification_confirm_view'e benzer mantık
     """
     permission_classes = [AllowAny]
     
@@ -285,18 +246,18 @@ class EmailVerificationConfirmAPIView(APIView):
         Confirm email verification with token
         """
         try:
-            # Decode user ID - email_verification_confirm_view ile aynı
+            # Decode user ID
             uid = force_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            return Response({
-                'error': 'Geçersiz doğrulama linki',
-                'valid_link': False
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Geçersiz doğrulama linki'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         # Check if token is valid
         if user is not None and default_token_generator.check_token(user, token):
-            # Verify user - email_verification_confirm_view ile aynı
+            # Verify user
             if not user.is_verified:
                 user.is_verified = True
                 user.save()
@@ -315,35 +276,21 @@ class EmailVerificationConfirmAPIView(APIView):
                 except Exception as e:
                     print(f"Welcome email failed: {e}")
                 
-                return Response({
-                    'message': f'Email adresiniz doğrulandı! Hoş geldin {user.username}!',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'is_verified': True
-                    },
-                    'valid_link': True,
-                    'already_verified': False
-                }, status=status.HTTP_200_OK)
+                return Response(
+                    {'detail': f'Email adresiniz doğrulandı! Hoş geldin {user.username}!'}, 
+                    status=status.HTTP_200_OK
+                )
             else:
-                return Response({
-                    'message': 'Email adresiniz zaten doğrulanmış.',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'is_verified': True
-                    },
-                    'valid_link': True,
-                    'already_verified': True
-                }, status=status.HTTP_200_OK)
+                return Response(
+                    {'detail': 'Email adresiniz zaten doğrulanmış'}, 
+                    status=status.HTTP_200_OK
+                )
         else:
             # Invalid token
-            return Response({
-                'error': 'Doğrulama linki geçersiz veya süresi dolmuş',
-                'valid_link': False
-            }, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': 'Doğrulama linki geçersiz veya süresi dolmuş'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
