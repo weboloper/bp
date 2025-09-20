@@ -2,6 +2,7 @@
 Quick Django Server Test Script
 """
 
+import os
 import subprocess
 import sys
 import time
@@ -20,7 +21,7 @@ def test_django_startup():
             [sys.executable, "manage.py", "check"],
             capture_output=True,
             text=True,
-            cwd="D:/py/bp/backend"
+            cwd=os.path.dirname(os.path.abspath(__file__))
         )
         
         if result.returncode == 0:
@@ -134,7 +135,7 @@ def run_django_server_test():
         print("   Starting Django server on port 8001...")
         server_process = subprocess.Popen(
             [sys.executable, "manage.py", "runserver", "8001"],
-            cwd="D:/py/bp/backend",
+            cwd=os.path.dirname(os.path.abspath(__file__)),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
