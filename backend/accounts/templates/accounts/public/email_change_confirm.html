@@ -1,0 +1,30 @@
+{% extends 'accounts/base_public.html' %}
+
+{% block main_content %}
+<div class="auth-card">
+    <h2>Email Değişiklik Onayı</h2>
+    
+    {% if validlink %}
+        <div class="success-message">
+            <h3>✅ Email Başarıyla Değiştirildi!</h3>
+            <p>Email adresiniz <strong>{{ old_email }}</strong> adresinden <strong>{{ new_email }}</strong> adresine başarıyla değiştirildi.</p>
+            <p>Artık yeni email adresinizle giriş yapabilirsiniz.</p>
+            
+            <div class="auth-links">
+                <a href="{% url 'accounts:login' %}" class="btn btn-success">Giriş Yap</a>
+                <a href="{% url 'accounts:profile' %}" class="btn btn-primary">Profile Git</a>
+            </div>
+        </div>
+    {% else %}
+        <div class="error-message">
+            <h3>❌ Geçersiz Link</h3>
+            <p>Email değişiklik linki geçersiz, süresi dolmuş veya zaten kullanılmış.</p>
+            
+            <div class="auth-links">
+                <a href="{% url 'accounts:email_change' %}" class="btn btn-primary">Yeni Talep Oluştur</a>
+                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Profile Git</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

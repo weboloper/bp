@@ -1,0 +1,19 @@
+{% extends 'accounts/base_public.html' %}
+
+{% block main_content %}
+<div class="auth-card">
+    {% if validlink %}
+        <div class="success-message">
+            <h2>✅ Email Doğrulandı!</h2>
+            <p>Email adresiniz başarıyla doğrulandı. Artık hesabınızı tam olarak kullanabilirsiniz.</p>
+            <a href="{% url 'accounts:login' %}" class="btn btn-primary">Giriş Yap</a>
+        </div>
+    {% else %}
+        <div class="error-message">
+            <h2>❌ Geçersiz Link</h2>
+            <p>Email doğrulama linki geçersiz veya süresi dolmuş.</p>
+            <a href="{% url 'accounts:email_verification_resend' %}" class="btn btn-primary">Yeni Link İste</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

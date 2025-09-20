@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<main>
+    <div class="container">
+        <div class="info">
+        <strong>Ortam:</strong> {{environment}}<br>
+        <strong>Debug Modu:</strong>{{debug}}<br>
+        <strong>Static Handler:</strong>{{static_handler}}<br>
+        <strong>Zaman:</strong>{{timestamp}}
+
+        </div>
+
+        <div class="links">
+        <h3>🔗 Linkler:</h3>
+        <a href="/admin/">🔧 Admin Panel</a>
+        <a href="/accounts/profile/">🧑🏻‍ Profile</a>
+        <a href="/health/">💚 Health Check</a>
+        <a href="/api/">📡 API Docs</a>
+        <a href="/test-email/">📧 Test Email</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

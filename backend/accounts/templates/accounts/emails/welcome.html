@@ -1,0 +1,67 @@
+{% extends 'email_base.html' %}
+
+{% block email_title %}Hoş Geldiniz - BP Django App{% endblock %}
+
+{% block email_header %}Hoş Geldiniz! 🎉{% endblock %}
+
+{% block email_content %}
+<div style="text-align: center; margin-bottom: 30px;">
+    <h2 style="color: #28a745; margin: 0 0 10px 0;">Merhaba {{ user.first_name|default:user.username }}!</h2>
+    <p style="font-size: 18px; color: #6c757d; margin: 0;">BP Django App'e başarıyla kayıt oldunuz.</p>
+</div>
+
+<div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 30px;">
+    <h3 style="color: #343a40; margin: 0 0 15px 0;">Hesap Bilgileriniz:</h3>
+    <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Kullanıcı Adı:</td>
+            <td style="padding: 8px 0; color: #343a40;">{{ user.username }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Email:</td>
+            <td style="padding: 8px 0; color: #343a40;">{{ user.email }}</td>
+        </tr>
+        <tr>
+            <td style="padding: 8px 0; color: #6c757d; font-weight: bold;">Kayıt Tarihi:</td>
+            <td style="padding: 8px 0; color: #343a40;">{{ user.created_at|date:"d.m.Y H:i" }}</td>
+        </tr>
+    </table>
+</div>
+
+<div style="text-align: center; margin-bottom: 30px;">
+    <h3 style="color: #343a40; margin: 0 0 15px 0;">Şimdi Ne Yapabilirsiniz?</h3>
+    <ul style="text-align: left; color: #6c757d; line-height: 1.6;">
+        <li>Profilinizi tamamlayabilirsiniz</li>
+        <li>İlk gönderinizi oluşturabilirsiniz</li>
+        <li>Diğer kullanıcıları takip edebilirsiniz</li>
+        <li>Platform özelliklerini keşfedebilirsiniz</li>
+    </ul>
+</div>
+
+<div style="text-align: center; margin-bottom: 30px;">
+    <a href="{{ site_url }}" 
+       style="display: inline-block; 
+              background-color: #007bff; 
+              color: white; 
+              padding: 12px 25px; 
+              text-decoration: none; 
+              border-radius: 5px; 
+              font-weight: bold;">
+        Platformu Keşfet
+    </a>
+</div>
+
+<div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+    <p style="margin: 0; color: #856404; font-size: 14px;">
+        <strong>💡 İpucu:</strong> 
+        Hesabınızın güvenliği için şifrenizi kimseyle paylaşmayın ve güçlü bir şifre kullanmaya devam edin.
+    </p>
+</div>
+
+<div style="text-align: center; color: #6c757d; font-size: 14px;">
+    <p style="margin: 0;">
+        Herhangi bir sorunuz varsa bizimle iletişime geçmekten çekinmeyin.<br>
+        <strong>Keyifli kullanımlar dileriz!</strong>
+    </p>
+</div>
+{% endblock %}

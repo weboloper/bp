@@ -38,12 +38,18 @@ class EmailService:
         Use this for: welcome emails, newsletters, notifications
         
         Args:
-            template_name: Email template name (without .html)
+            template_name: Email template name (app-based path without .html)
+                          Examples: 'accounts/emails/welcome', 'posts/emails/notification'
             context: Template context data
             subject: Email subject
             recipient_list: List of recipient emails
             from_email: From email address (optional)
             force_sync: Force synchronous sending
+            
+        Template Path Examples:
+            'accounts/emails/welcome' -> accounts/templates/accounts/emails/welcome.html
+            'posts/emails/new_comment' -> posts/templates/posts/emails/new_comment.html
+            'core/emails/newsletter' -> core/templates/core/emails/newsletter.html
         """
         # Critical emails or forced sync always send synchronously
         if force_sync or not getattr(settings, 'USE_ASYNC_EMAIL', False):
@@ -88,11 +94,16 @@ class EmailService:
         Use this for: email verification, password reset, important notifications
         
         Args:
-            template_name: Email template name (without .html)
+            template_name: Email template name (app-based path without .html)
+                          Examples: 'accounts/emails/verification', 'accounts/emails/password_reset'
             context: Template context data
             subject: Email subject
             recipient_list: List of recipient emails
             from_email: From email address (optional)
+            
+        Template Path Examples:
+            'accounts/emails/verification' -> accounts/templates/accounts/emails/verification.html
+            'accounts/emails/password_reset' -> accounts/templates/accounts/emails/password_reset.html
         """
         return EmailService._send_template_email(
             template_name=template_name,
@@ -139,8 +150,17 @@ class EmailService:
         try:
             from_email = from_email or settings.DEFAULT_FROM_EMAIL
             
+            # App-based template path support
+            # template_name can be: 'accounts/emails/welcome' or 'emails/accounts/welcome'
+            if not template_name.startswith('emails/'):
+                # App-based path: 'accounts/emails/welcome' -> render directly
+                html_template_path = f'{template_name}.html'
+            else:
+                # Legacy path: 'emails/accounts/welcome' -> use as is
+                html_template_path = f'{template_name}.html'
+            
             # Render HTML content
-            html_content = render_to_string(f'emails/{template_name}.html', context)
+            html_content = render_to_string(html_template_path, context)
             text_content = strip_tags(html_content)
             
             # Create email message

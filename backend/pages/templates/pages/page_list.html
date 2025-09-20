@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Sayfalar{% endblock %}
+
+{% block content %}
+
+    <h1>Sayfalar</h1>
+        
+    {% if pages %}
+        {% for page in pages %}
+            <h2><a href="{% url 'pages:detail' slug=page.slug %}">{{ page.title }}</a></h2>
+                        
+            <div>{{ page.content|truncatewords:30|linebreaks }}</div>
+            <span>Oluşturulma: {{ page.created_at|date:"d M Y" }}</span>
+
+            {% if page.get_children %}
+                    <span>{{ page.get_children.count }} alt sayfa</span>
+            {% endif %}
+      
+            {% if page.get_children %}
+                <h2>Alt Sayfalar</h2>
+                <ul>
+                    {% for child in page.get_children %}
+                        <li>
+                            <a href="{% url 'pages:detail' slug=child.slug %}">
+                                {{ child.title }}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+                {% endfor %}
+        {% else %}
+            <p>Henüz hiç sayfa eklenmemiş.</p>
+        {% endif %}
+
+{% endblock %}

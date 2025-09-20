@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page.title }}{% endblock %}
+
+{% block content %}
+
+    <h1>{{ page.title }}</h1>
+    <span>Oluşturulma: {{ page.created_at|date:"d F Y" }}</span>
+    {% if page.updated_at != page.created_at %}
+        <span>•</span>
+        <span>Güncelleme: {{ page.updated_at|date:"d F Y" }}</span>
+    {% endif %}
+
+
+    <div>
+        {{ page.content|linebreaks }}
+    </div>
+
+     {% if breadcrumbs %}
+    <h2>Breadcrumbs</h2>
+        {% for breadcrumb in breadcrumbs %}
+            <li>
+                <div>
+                    {% if forloop.last %}
+                        <span>{{ breadcrumb.title }}</span>
+                    {% else %}
+                        <a href="{% url 'pages:detail' slug=breadcrumb.slug %}">
+                            {{ breadcrumb.title }}
+                        </a>
+                    {% endif %}
+                </div>
+            </li>
+        {% endfor %}
+    {% endif %}
+    
+
+    {% if children %}
+        <h2>Alt Sayfalar</h2>
+        {% for child in children %}
+            
+                    <a href="{% url 'pages:detail' slug=child.slug %}">
+                        {{ child.title }}
+                    </a>
+                <p>
+                    {{ child.content|truncatewords:15 }}
+                </p>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Navigation -->
+    {% if page.parent %}
+        <a href="{% url 'pages:detail' slug=page.parent.slug %}">
+            {{ page.parent.title }}
+        </a>
+            
+        <a href="{% url 'pages:list' %}">Tüm Sayfalar</a>
+    {% else %}
+        <a href="{% url 'pages:list' %}">Tüm Sayfalar</a>
+    {% endif %}
+
+
+{% endblock %}

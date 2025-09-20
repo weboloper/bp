@@ -18,7 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from core.views import home, health_check, api_root
+from core.views import home, health_check, api_root, test_email
+
+# Custom error handlers
+handler404 = 'pages.handlers.custom_404_handler'
 
 urlpatterns = [
     # Admin panel
@@ -27,14 +30,24 @@ urlpatterns = [
     # Core endpoints
     path('', home, name='home'),
     path('health/', health_check, name='health_check'),
-    path('api/', api_root, name='api_root'),
+    path('test-email/', test_email, name='test_email'),
+   
     
-    # API endpoints (add your app URLs here)
-    # path('api/v1/', include('your_app.urls')),
+    # App URLs
+    path('accounts/', include('accounts.urls')),
+    
+    # API endpoints
+    path("api/", include([
+        path('', api_root, name='api_root'),
+        path('accounts/', include('accounts.api.urls')),
+    ])),
+    
+    # Pages app - FALLBACK (en sonda olmalı)
+    path('', include('pages.urls')),
 ]
 
 # Media dosyalar sadece development'ta Django'dan serve edilir
-# Static dosyalar artık Caddy tarafından serve ediliyor
-if settings.DEBUG and settings.STATIC_FILES_HANDLER not in ['caddy', 'nginx']:
-    # Sadece whitenoise gibi handler'lar için media files - static files Caddy/Nginx'den gelir
+# Static dosyalar development'ta da Django'dan serve edilir
+if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

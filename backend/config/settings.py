@@ -107,12 +107,15 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
     'django_celery_beat',
     'django_celery_results',
     
     # Local apps
     'core',
+    'accounts',
+    'pages',
     
 ]
 
@@ -271,6 +274,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Custom User Model
+AUTH_USER_MODEL = 'accounts.User'
+
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -282,6 +288,36 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20,
+}
+
+# Django Simple JWT Settings
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+    
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    
+    'JTI_CLAIM': 'jti',
+    
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
 # CORS Settings
@@ -337,26 +373,29 @@ if not DEBUG:
 # Environment-specific settings
 CURRENT_ENV = env('DJANGO_ENV', default='development')
 
+# Frontend URL Configuration
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+
 # Sentry Configuration
 SENTRY_DSN = env('SENTRY_DSN', default=None)
-if SENTRY_DSN and not DEBUG:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-    from sentry_sdk.integrations.celery import CeleryIntegration
-    from sentry_sdk.integrations.redis import RedisIntegration
+# if SENTRY_DSN and not DEBUG:
+#     import sentry_sdk
+#     from sentry_sdk.integrations.django import DjangoIntegration
+#     from sentry_sdk.integrations.celery import CeleryIntegration
+#     from sentry_sdk.integrations.redis import RedisIntegration
     
-    sentry_sdk.init(
-        dsn=SENTRY_DSN,
-        integrations=[
-            DjangoIntegration(auto_enabling=True),
-            CeleryIntegration(auto_enabling=True),
-            RedisIntegration(),
-        ],
-        traces_sample_rate=0.1,
-        send_default_pii=True,
-        environment=CURRENT_ENV,
-        release=env('APP_VERSION', default='1.0.0'),
-    )
+#     sentry_sdk.init(
+#         dsn=SENTRY_DSN,
+#         integrations=[
+#             DjangoIntegration(auto_enabling=True),
+#             CeleryIntegration(auto_enabling=True),
+#             RedisIntegration(),
+#         ],
+#         traces_sample_rate=0.1,
+#         send_default_pii=True,
+#         environment=CURRENT_ENV,
+#         release=env('APP_VERSION', default='1.0.0'),
+#     )
 
 # Email Configuration
 USE_ASYNC_EMAIL = env('USE_ASYNC_EMAIL')
