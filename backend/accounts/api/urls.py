@@ -14,7 +14,10 @@ from .views import (
     PasswordChangeAPIView,
     EmailChangeAPIView,
     EmailChangeConfirmAPIView,
-    UsernameChangeAPIView
+    UsernameChangeAPIView,
+    GoogleSocialLoginAPIView,
+    FacebookSocialLoginAPIView,
+    AppleSocialLoginAPIView
 )
 # Cookie-based views (Farklı host için devre dışı)
 # from .auth_views import (
@@ -50,6 +53,11 @@ urlpatterns = [
     
     # Username change endpoint (authenticated)
     path('auth/username-change/', UsernameChangeAPIView.as_view(), name='username_change'),
+    
+    # Social login endpoints
+    path('auth/social/google/', GoogleSocialLoginAPIView.as_view(), name='google_social_login'),
+    path('auth/social/facebook/', FacebookSocialLoginAPIView.as_view(), name='facebook_social_login'),
+    path('auth/social/apple/', AppleSocialLoginAPIView.as_view(), name='apple_social_login'),
     
     # User profile endpoints - RESTful design
     path('me/', MeAPIView.as_view(), name='current_user'),  # GET: profile, PATCH: update

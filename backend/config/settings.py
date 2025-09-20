@@ -104,6 +104,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',  # allauth için gerekli
     
     # Third party apps
     'rest_framework',
@@ -111,6 +112,14 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_beat',
     'django_celery_results',
+    
+    # Django Allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.apple',
     
     # Local apps
     'core',
@@ -136,6 +145,7 @@ MIDDLEWARE.extend([
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ])
@@ -427,3 +437,74 @@ else:
     # Development specific settings
     print("Running in DEVELOPMENT mode")
     pass
+
+# Django Sites Framework (allauth için gerekli)
+SITE_ID = 1
+
+# Django Allauth Configuration
+# Minimal configuration - sadece backend API için kullanacağız
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+# Allauth settings - minimal setup
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_VERIFICATION = 'none'  # Bizim kendi email verification'ımızı kullanıyoruz
+ACCOUNT_USERNAME_REQUIRED = False
+SOCIALACCOUNT_AUTO_SIGNUP = True
+
+# Social login ayarları
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        },
+        'OAUTH_PKCE_ENABLED': True,
+    },
+    'facebook': {
+        'METHOD': 'oauth2',
+        'SCOPE': ['email', 'public_profile'],
+        'AUTH_PARAMS': {'auth_type': 'reauthenticate'},
+        'INIT_PARAMS': {'cookie': True},
+        'FIELDS': [
+            'id',
+            'first_name',
+            'last_name',
+            'middle_name',
+            'name',
+            'email',
+            'verified',
+            'locale',
+            'timezone',
+            'link',
+            'gender',
+            'updated_time',
+        ],
+        'EXCHANGE_TOKEN': True,
+        'VERIFIED_EMAIL': False,
+        'VERSION': 'v18.0',
+    },
+    'apple': {
+        'APP': {
+            'client_id': env('APPLE_CLIENT_ID', default=''),
+            'secret': env('APPLE_SECRET', default=''),  # Apple private key
+            'key': env('APPLE_KEY_ID', default=''),
+            'team': env('APPLE_TEAM_ID', default=''),
+        }
+    }
+}
+
+# Google OAuth credentials
+GOOGLE_OAUTH2_CLIENT_ID = env('GOOGLE_OAUTH2_CLIENT_ID', default='')
+GOOGLE_OAUTH2_CLIENT_SECRET = env('GOOGLE_OAUTH2_CLIENT_SECRET', default='')
+
+# Facebook OAuth credentials
+FACEBOOK_APP_ID = env('FACEBOOK_APP_ID', default='')
+FACEBOOK_APP_SECRET = env('FACEBOOK_APP_SECRET', default='')

@@ -260,6 +260,453 @@ class PasswordChangeSerializer(serializers.Serializer):
         return self.user
 
 
+# Social Login Serializers
+class GoogleSocialLoginSerializer(serializers.Serializer):
+    """
+    Google Social Login Serializer
+    Frontend'den gelen Google access token'i verify eder ve JWT token döner
+    """
+    access_token = serializers.CharField(required=True)
+    
+    def validate_access_token(self, value):
+        """
+        Google access token'i doğrula
+        """
+        access_token = value.strip()
+        
+        if not access_token:
+            raise serializers.ValidationError('Google access token gerekli')
+        
+        return access_token
+    
+    def verify_google_token(self, access_token):
+        """
+        Google access token'i verify et ve user bilgilerini al
+        """
+        try:
+            import requests
+            
+            # Google userinfo endpoint'ine istek at
+            response = requests.get(
+                'https://www.googleapis.com/oauth2/v2/userinfo',
+                headers={'Authorization': f'Bearer {access_token}'}
+            )
+            
+            if response.status_code != 200:
+                raise serializers.ValidationError('Geçersiz Google access token')
+            
+            user_data = response.json()
+            
+            # Required fields check
+            if not user_data.get('email'):
+                raise serializers.ValidationError('Google hesabından email bilgisi alınamadı')
+            
+            return user_data
+            
+        except requests.RequestException:
+            raise serializers.ValidationError('Google token doğrulama sırasında hata oluştu')
+        except Exception as e:
+            raise serializers.ValidationError('Google login sırasında hata oluştu')
+    
+    def get_or_create_user(self, google_user_data):
+        """
+        Google user data ile User oluştur veya mevcutını getir
+        """
+        email = google_user_data['email']
+        
+        try:
+            # Mevcut user var mı?
+            user = User.objects.get(email__iexact=email)
+            
+            # User'i güncelle (name bilgileri vs.)
+            if not user.first_name and google_user_data.get('given_name'):
+                user.first_name = google_user_data['given_name']
+            if not user.last_name and google_user_data.get('family_name'):
+                user.last_name = google_user_data['family_name']
+            
+            # Social login ile gelen user verified olsun
+            user.is_verified = True
+            user.save()
+            
+            return user
+            
+        except User.DoesNotExist:
+            # Yeni user oluştur
+            username_base = email.split('@')[0]
+            username = username_base
+            counter = 1
+            
+            # Unique username oluştur
+            while User.objects.filter(username=username).exists():
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            # User oluştur
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=google_user_data.get('given_name', ''),
+                last_name=google_user_data.get('family_name', ''),
+                is_verified=True  # Social login ile verified
+            )
+            
+            # Profile oluştur
+            from accounts.models import Profile
+            Profile.objects.create(
+                user=user,
+                bio='Joined via Google'
+            )
+            
+            return user
+    
+    def generate_jwt_tokens(self, user):
+        """
+        User için JWT tokens oluştur
+        """
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+
+class FacebookSocialLoginSerializer(serializers.Serializer):
+    """
+    Facebook Social Login Serializer
+    Frontend'den gelen Facebook access token'i verify eder ve JWT token döner
+    """
+    access_token = serializers.CharField(required=True)
+    
+    def validate_access_token(self, value):
+        """
+        Facebook access token'i doğrula
+        """
+        access_token = value.strip()
+        
+        if not access_token:
+            raise serializers.ValidationError('Facebook access token gerekli')
+        
+        return access_token
+    
+    def verify_facebook_token(self, access_token):
+        """
+        Facebook access token'i verify et ve user bilgilerini al
+        """
+        try:
+            import requests
+            
+            # Facebook Graph API'ye istek at
+            response = requests.get(
+                'https://graph.facebook.com/me',
+                params={
+                    'access_token': access_token,
+                    'fields': 'id,email,first_name,last_name,picture'
+                }
+            )
+            
+            if response.status_code != 200:
+                raise serializers.ValidationError('Geçersiz Facebook access token')
+            
+            user_data = response.json()
+            
+            # Error check
+            if 'error' in user_data:
+                raise serializers.ValidationError(f'Facebook API hatası: {user_data["error"]["message"]}')
+            
+            # Required fields check
+            if not user_data.get('email'):
+                raise serializers.ValidationError('Facebook hesabından email bilgisi alınamadı')
+            
+            return user_data
+            
+        except requests.RequestException:
+            raise serializers.ValidationError('Facebook token doğrulama sırasında hata oluştu')
+        except Exception as e:
+            raise serializers.ValidationError('Facebook login sırasında hata oluştu')
+    
+    def get_or_create_user(self, facebook_user_data):
+        """
+        Facebook user data ile User oluştur veya mevcutunu getir
+        """
+        email = facebook_user_data['email']
+        
+        try:
+            # Mevcut user var mı?
+            user = User.objects.get(email__iexact=email)
+            
+            # User'i güncelle (name bilgileri vs.)
+            if not user.first_name and facebook_user_data.get('first_name'):
+                user.first_name = facebook_user_data['first_name']
+            if not user.last_name and facebook_user_data.get('last_name'):
+                user.last_name = facebook_user_data['last_name']
+            
+            # Social login ile gelen user verified olsun
+            user.is_verified = True
+            user.save()
+            
+            return user
+            
+        except User.DoesNotExist:
+            # Yeni user oluştur
+            username_base = email.split('@')[0]
+            username = username_base
+            counter = 1
+            
+            # Unique username oluştur
+            while User.objects.filter(username=username).exists():
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            # User oluştur
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=facebook_user_data.get('first_name', ''),
+                last_name=facebook_user_data.get('last_name', ''),
+                is_verified=True  # Social login ile verified
+            )
+            
+            # Profile oluştur
+            from accounts.models import Profile
+            Profile.objects.create(
+                user=user,
+                bio='Joined via Facebook'
+            )
+            
+            return user
+    
+    def generate_jwt_tokens(self, user):
+        """
+        User için JWT tokens oluştur
+        """
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+
+class AppleSocialLoginSerializer(serializers.Serializer):
+    """
+    Apple Social Login Serializer
+    Frontend'den gelen Apple identity token'i verify eder ve JWT token döner
+    """
+    identity_token = serializers.CharField(required=True)
+    
+    def validate_identity_token(self, value):
+        """
+        Apple identity token'i doğrula
+        """
+        identity_token = value.strip()
+        
+        if not identity_token:
+            raise serializers.ValidationError('Apple identity token gerekli')
+        
+        return identity_token
+    
+    def verify_apple_token(self, identity_token):
+        """
+        Apple identity token'i verify et ve user bilgilerini al
+        """
+        try:
+            import jwt
+            import requests
+            from cryptography.hazmat.primitives import serialization
+            import json
+            
+            # Apple'ın public key'lerini al
+            apple_keys_response = requests.get('https://appleid.apple.com/auth/keys')
+            if apple_keys_response.status_code != 200:
+                raise serializers.ValidationError('Apple keys alınamadı')
+            
+            apple_keys = apple_keys_response.json()
+            
+            # Token header'ını decode et
+            token_header = jwt.get_unverified_header(identity_token)
+            key_id = token_header.get('kid')
+            
+            if not key_id:
+                raise serializers.ValidationError('Apple token key ID bulunamadı')
+            
+            # Matching key'i bul
+            public_key = None
+            for key in apple_keys['keys']:
+                if key['kid'] == key_id:
+                    # JWK'dan public key oluştur
+                    from cryptography.hazmat.primitives.asymmetric import rsa
+                    from cryptography.hazmat.primitives import hashes
+                    import base64
+                    
+                    n = int.from_bytes(base64.urlsafe_b64decode(key['n'] + '==='), 'big')
+                    e = int.from_bytes(base64.urlsafe_b64decode(key['e'] + '==='), 'big')
+                    
+                    public_key = rsa.RSAPublicNumbers(e, n).public_key()
+                    break
+            
+            if not public_key:
+                raise serializers.ValidationError('Apple public key bulunamadı')
+            
+            # Token'ı verify et
+            try:
+                decoded_token = jwt.decode(
+                    identity_token,
+                    public_key,
+                    algorithms=['RS256'],
+                    audience='your.app.bundle.id',  # Bu bundle ID'yi settings'den alın
+                    issuer='https://appleid.apple.com'
+                )
+            except jwt.InvalidTokenError as e:
+                raise serializers.ValidationError(f'Apple token geçersiz: {str(e)}')
+            
+            # Required fields check
+            if not decoded_token.get('email'):
+                raise serializers.ValidationError('Apple hesabından email bilgisi alınamadı')
+            
+            return decoded_token
+            
+        except ImportError:
+            raise serializers.ValidationError('Apple login için gerekli kütüphaneler yüklü değil (PyJWT, cryptography)')
+        except Exception as e:
+            raise serializers.ValidationError(f'Apple token doğrulama hatası: {str(e)}')
+    
+    def get_or_create_user(self, apple_user_data):
+        """
+        Apple user data ile User oluştur veya mevcutunu getir
+        """
+        email = apple_user_data['email']
+        
+        try:
+            # Mevcut user var mı?
+            user = User.objects.get(email__iexact=email)
+            
+            # Apple'dan gelen user verified olsun
+            user.is_verified = True
+            user.save()
+            
+            return user
+            
+        except User.DoesNotExist:
+            # Yeni user oluştur
+            username_base = email.split('@')[0]
+            username = username_base
+            counter = 1
+            
+            # Unique username oluştur
+            while User.objects.filter(username=username).exists():
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            # User oluştur
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=apple_user_data.get('given_name', ''),
+                last_name=apple_user_data.get('family_name', ''),
+                is_verified=True  # Social login ile verified
+            )
+            
+            # Profile oluştur
+            from accounts.models import Profile
+            Profile.objects.create(
+                user=user,
+                bio='Joined via Apple'
+            )
+            
+            return user
+    
+    def generate_jwt_tokens(self, user):
+        """
+        User için JWT tokens oluştur
+        """
+        from rest_framework_simplejwt.tokens import RefreshToken
+        
+        refresh = RefreshToken.for_user(user)
+        
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+
+
+# Other serializers (UsernameChangeSerializer, EmailChangeSerializer, etc.) would continue here...
+# Keeping this file focused on the main functionality
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Custom JWT token serializer that accepts both username and email
+    """
+    username_field = 'username'  # This will actually accept username OR email
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Update field help text to reflect that it accepts both
+        self.fields['username'].help_text = 'Username veya email adresi giriniz'
+    
+    def validate(self, attrs):
+        username_or_email = attrs.get('username')
+        password = attrs.get('password')
+        
+        if not username_or_email or not password:
+            raise serializers.ValidationError('Kullanıcı adı/email ve şifre gerekli')
+        
+        # Check if input is email or username
+        user = None
+        username_to_authenticate = username_or_email
+        
+        if '@' in username_or_email:
+            # It's an email
+            try:
+                validate_email(username_or_email)
+                # Find user by email
+                try:
+                    user_obj = User.objects.get(email__iexact=username_or_email)
+                    username_to_authenticate = user_obj.username
+                except User.DoesNotExist:
+                    raise serializers.ValidationError(
+                        'Bu email adresi ile kayıtlı kullanıcı bulunamadı'
+                    )
+            except ValidationError:
+                raise serializers.ValidationError('Geçerli bir email adresi giriniz')
+        
+        # Authenticate user
+        user = authenticate(
+            request=self.context.get('request'),
+            username=username_to_authenticate,
+            password=password
+        )
+        
+        if user is None:
+            if '@' in username_or_email:
+                raise serializers.ValidationError('Email veya şifre hatalı')
+            else:
+                raise serializers.ValidationError('Kullanıcı adı veya şifre hatalı')
+        
+        if not user.is_active:
+            raise serializers.ValidationError('Hesabınız devre dışı bırakılmış')
+        
+        if not user.is_verified:
+            raise serializers.ValidationError(
+                'Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.'
+            )
+        
+        # If we get here, authentication was successful
+        # Get the token data using the parent class logic
+        refresh = self.get_token(user)
+        
+        data = {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }
+        
+        return data
+
+
 class UsernameChangeSerializer(serializers.Serializer):
     """
     Username change serializer - accounts/forms.py UsernameChangeForm'a benzer mantık
@@ -312,8 +759,6 @@ class UsernameChangeSerializer(serializers.Serializer):
             raise serializers.ValidationError(str(e.message))
         
         # Check if username exists
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
         if User.objects.filter(username__iexact=new_username).exists():
             raise serializers.ValidationError('Bu kullanıcı adı zaten alınmış')
         
@@ -371,12 +816,7 @@ class EmailChangeSerializer(serializers.Serializer):
         if self.user and new_email == self.user.email.lower():
             raise serializers.ValidationError('Yeni email adresi mevcut email ile aynı olamaz')
         
-        # Django's built-in email validation (already handled by EmailField)
-        # But we do additional checks
-        
         # Check if email already exists
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
         if User.objects.filter(email__iexact=new_email).exists():
             raise serializers.ValidationError('Bu email adresi zaten kullanılıyor')
         
@@ -565,73 +1005,3 @@ class EmailVerificationResendSerializer(serializers.Serializer):
             return User.objects.get(email=email)
         except User.DoesNotExist:
             return None
-
-
-class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Custom JWT token serializer that accepts both username and email
-    """
-    username_field = 'username'  # This will actually accept username OR email
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Update field help text to reflect that it accepts both
-        self.fields['username'].help_text = 'Username veya email adresi giriniz'
-    
-    def validate(self, attrs):
-        username_or_email = attrs.get('username')
-        password = attrs.get('password')
-        
-        if not username_or_email or not password:
-            raise serializers.ValidationError('Kullanıcı adı/email ve şifre gerekli')
-        
-        # Check if input is email or username
-        user = None
-        username_to_authenticate = username_or_email
-        
-        if '@' in username_or_email:
-            # It's an email
-            try:
-                validate_email(username_or_email)
-                # Find user by email
-                try:
-                    user_obj = User.objects.get(email__iexact=username_or_email)
-                    username_to_authenticate = user_obj.username
-                except User.DoesNotExist:
-                    raise serializers.ValidationError(
-                        'Bu email adresi ile kayıtlı kullanıcı bulunamadı'
-                    )
-            except ValidationError:
-                raise serializers.ValidationError('Geçerli bir email adresi giriniz')
-        
-        # Authenticate user
-        user = authenticate(
-            request=self.context.get('request'),
-            username=username_to_authenticate,
-            password=password
-        )
-        
-        if user is None:
-            if '@' in username_or_email:
-                raise serializers.ValidationError('Email veya şifre hatalı')
-            else:
-                raise serializers.ValidationError('Kullanıcı adı veya şifre hatalı')
-        
-        if not user.is_active:
-            raise serializers.ValidationError('Hesabınız devre dışı bırakılmış')
-        
-        if not user.is_verified:
-            raise serializers.ValidationError(
-                'Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.'
-            )
-        
-        # If we get here, authentication was successful
-        # Get the token data using the parent class logic
-        refresh = self.get_token(user)
-        
-        data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-        }
-        
-        return data
