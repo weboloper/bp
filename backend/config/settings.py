@@ -466,16 +466,12 @@ USE_ASYNC_EMAIL = REDIS_AVAILABLE and env('USE_ASYNC_EMAIL', default=False)
 print(f"📧 Async email: {'Enabled' if USE_ASYNC_EMAIL else 'Disabled'}")
 
 # Email backend configuration
-if USE_ASYNC_EMAIL:
-    EMAIL_BACKEND = 'django_celery_email.backends.CeleryEmailBackend'
-    print("📧 Using Celery email backend (async)")
+if DEBUG and not env('EMAIL_HOST_USER', default=''):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("📧 Using console email backend (development)")
 else:
-    if DEBUG and not env('EMAIL_HOST_USER', default=''):
-        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-        print("📧 Using console email backend (development)")
-    else:
-        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-        print("📧 Using SMTP email backend (synchronous)")
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    print("📧 Using SMTP email backend")
 
 # Email Settings (Universal - works with any SMTP provider)
 EMAIL_HOST = env('EMAIL_HOST', default='localhost')
