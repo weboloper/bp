@@ -26,7 +26,7 @@ def test_api_structure():
         return
     
     # 2. JSON-based endpoint'leri test (Django Simple JWT)
-    base_url = "http://localhost:8000/api/v1/accounts"
+    base_url = "http://localhost:8000/api/accounts"
     
     print("2. JSON-based Login (Django Simple JWT):")
     login_url = f"{base_url}/auth/login/"
@@ -78,15 +78,15 @@ def test_api_structure():
     
     print("\n📍 Mevcut Endpoint'ler:")
     print("  🟦 JSON-based (Authorization header):")
-    print("     - POST /api/v1/accounts/auth/login/")
-    print("     - POST /api/v1/accounts/auth/token/refresh/")
-    print("     - POST /api/v1/accounts/auth/token/verify/")
+    print("     - POST /api/accounts/auth/login/")
+    print("     - POST /api/accounts/auth/token/refresh/")
+    print("     - POST /api/accounts/auth/token/verify/")
     
     print("  🍪 Cookie-based (httpOnly cookies):")
-    print("     - POST /api/v1/accounts/auth/login-cookie/")
-    print("     - POST /api/v1/accounts/auth/logout-cookie/")
-    print("     - POST /api/v1/accounts/auth/token/verify-cookie/")
-    print("     - POST /api/v1/accounts/auth/token/refresh-cookie/")
+    print("     - POST /api/accounts/auth/login-cookie/")
+    print("     - POST /api/accounts/auth/logout-cookie/")
+    print("     - POST /api/accounts/auth/token/verify-cookie/")
+    print("     - POST /api/accounts/auth/token/refresh-cookie/")
     
     print("\n📋 Sonraki Test:")
     print("  - Test user oluştur: python manage.py createsuperuser")
