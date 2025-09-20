@@ -13,7 +13,8 @@ from .views import (
     EmailVerificationConfirmAPIView,
     PasswordChangeAPIView,
     EmailChangeAPIView,
-    EmailChangeConfirmAPIView
+    EmailChangeConfirmAPIView,
+    UsernameChangeAPIView
 )
 # Cookie-based views (Farklı host için devre dışı)
 # from .auth_views import (
@@ -47,8 +48,11 @@ urlpatterns = [
     path('auth/email-change/', EmailChangeAPIView.as_view(), name='email_change'),
     path('auth/email-change-confirm/<uidb64>/<token>/<new_email_b64>/', EmailChangeConfirmAPIView.as_view(), name='email_change_confirm'),
     
-    # User profile endpoint
-    path('me/', MeAPIView.as_view(), name='current_user'),
+    # Username change endpoint (authenticated)
+    path('auth/username-change/', UsernameChangeAPIView.as_view(), name='username_change'),
+    
+    # User profile endpoints - RESTful design
+    path('me/', MeAPIView.as_view(), name='current_user'),  # GET: profile, PATCH: update
     
     # Cookie-based endpoints (Farklı host'ta çalışmaz - devre dışı)
     # path('auth/login-cookie/', login_cookie, name='login_cookie'),

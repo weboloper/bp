@@ -260,6 +260,78 @@ class PasswordChangeSerializer(serializers.Serializer):
         return self.user
 
 
+class UsernameChangeSerializer(serializers.Serializer):
+    """
+    Username change serializer - accounts/forms.py UsernameChangeForm'a benzer mantık
+    """
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_username = serializers.CharField(max_length=30, required=True)
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def validate_current_password(self, value):
+        """
+        Current password validation - form'daki clean_current_password ile aynı
+        """
+        current_password = value
+        
+        if not current_password:
+            raise serializers.ValidationError('Mevcut şifrenizi girin')
+        
+        # Check if current password is correct
+        if self.user and not self.user.check_password(current_password):
+            raise serializers.ValidationError('Mevcut şifre yanlış')
+        
+        return current_password
+    
+    def validate_new_username(self, value):
+        """
+        New username validation - form'daki clean_new_username ile aynı
+        """
+        new_username = value.strip()
+        
+        if not new_username:
+            raise serializers.ValidationError('Yeni kullanıcı adı gerekli')
+        
+        if len(new_username) < 3:
+            raise serializers.ValidationError('Kullanıcı adı en az 3 karakter olmalı')
+        
+        if len(new_username) > 30:
+            raise serializers.ValidationError('Kullanıcı adı en fazla 30 karakter olabilir')
+        
+        # Check if same as current username
+        if self.user and new_username.lower() == self.user.username.lower():
+            raise serializers.ValidationError('Yeni kullanıcı adı mevcut kullanıcı adı ile aynı olamaz')
+        
+        # Alphanumeric validation
+        try:
+            validate_alphanumeric_username(new_username)
+        except ValidationError as e:
+            raise serializers.ValidationError(str(e.message))
+        
+        # Check if username exists
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if User.objects.filter(username__iexact=new_username).exists():
+            raise serializers.ValidationError('Bu kullanıcı adı zaten alınmış')
+        
+        return new_username
+    
+    def save(self):
+        """
+        Kullanıcının username'ini güncelle - form'daki save ile aynı
+        """
+        if not self.user:
+            raise serializers.ValidationError('User not provided')
+        
+        new_username = self.validated_data['new_username']
+        self.user.username = new_username
+        self.user.save()
+        return self.user
+
+
 class EmailChangeSerializer(serializers.Serializer):
     """
     Email change serializer - accounts/forms.py EmailChangeForm'a benzer mantık
@@ -309,6 +381,93 @@ class EmailChangeSerializer(serializers.Serializer):
             raise serializers.ValidationError('Bu email adresi zaten kullanılıyor')
         
         return new_email
+
+
+class ProfileUpdateSerializer(serializers.Serializer):
+    """
+    Profile update serializer - accounts/forms.py ProfileUpdateForm + ProfileDetailsForm'a benzer mantık
+    """
+    # User fields
+    first_name = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    last_name = serializers.CharField(max_length=30, required=False, allow_blank=True)
+    
+    # Profile fields
+    bio = serializers.CharField(max_length=500, required=False, allow_blank=True)
+    birth_date = serializers.DateField(required=False, allow_null=True)
+    avatar = serializers.ImageField(required=False, allow_null=True)
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def validate_first_name(self, value):
+        """
+        First name validation - form'daki clean_first_name ile aynı
+        """
+        first_name = value.strip() if value else ''
+        
+        if len(first_name) > 30:
+            raise serializers.ValidationError('Ad en fazla 30 karakter olabilir')
+        
+        return first_name
+    
+    def validate_last_name(self, value):
+        """
+        Last name validation - form'daki clean_last_name ile aynı
+        """
+        last_name = value.strip() if value else ''
+        
+        if len(last_name) > 30:
+            raise serializers.ValidationError('Soyad en fazla 30 karakter olabilir')
+        
+        return last_name
+    
+    def validate_bio(self, value):
+        """
+        Bio validation - form'daki clean_bio ile aynı
+        """
+        bio = value.strip() if value else ''
+        
+        if len(bio) > 500:
+            raise serializers.ValidationError('Bio en fazla 500 karakter olabilir')
+        
+        return bio
+    
+    def save(self):
+        """
+        Update user and profile - form'daki save ile aynı mantık
+        """
+        if not self.user:
+            raise serializers.ValidationError('User not provided')
+        
+        # Update user fields
+        self.user.first_name = self.validated_data.get('first_name', self.user.first_name)
+        self.user.last_name = self.validated_data.get('last_name', self.user.last_name)
+        self.user.save()
+        
+        # Get or create profile
+        from accounts.models import Profile
+        try:
+            profile = self.user.profile
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(
+                user=self.user,
+                birth_date=None,
+                bio='',
+                avatar=None
+            )
+        
+        # Update profile fields
+        if 'bio' in self.validated_data:
+            profile.bio = self.validated_data['bio']
+        if 'birth_date' in self.validated_data:
+            profile.birth_date = self.validated_data['birth_date']
+        if 'avatar' in self.validated_data:
+            profile.avatar = self.validated_data['avatar']
+        
+        profile.save()
+        
+        return self.user
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
