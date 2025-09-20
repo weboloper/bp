@@ -169,6 +169,97 @@ class PasswordResetSerializer(serializers.Serializer):
             return None
 
 
+class PasswordChangeSerializer(serializers.Serializer):
+    """
+    Password change serializer - accounts/forms.py PasswordChangeForm'a benzer mantık
+    """
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_password1 = serializers.CharField(write_only=True, required=True)
+    new_password2 = serializers.CharField(write_only=True, required=True)
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def validate_current_password(self, value):
+        """
+        Current password validation - form'daki clean_current_password ile aynı
+        """
+        current_password = value
+        
+        if not current_password:
+            raise serializers.ValidationError('Mevcut şifre gerekli')
+        
+        # Check if current password is correct
+        if self.user and not self.user.check_password(current_password):
+            raise serializers.ValidationError('Mevcut şifre yanlış')
+        
+        return current_password
+    
+    def validate_new_password1(self, value):
+        """
+        New password validation - form'daki clean_new_password1 ile aynı
+        """
+        new_password1 = value
+        
+        if not new_password1:
+            raise serializers.ValidationError('Yeni şifre gerekli')
+        
+        # Django's built-in password validation with user context
+        if self.user:
+            try:
+                validate_password(new_password1, self.user)
+            except ValidationError as e:
+                raise serializers.ValidationError(' '.join(e.messages))
+        
+        return new_password1
+    
+    def validate_new_password2(self, value):
+        """
+        New password confirmation validation
+        """
+        new_password2 = value
+        
+        if not new_password2:
+            raise serializers.ValidationError('Yeni şifre tekrarı gerekli')
+        
+        return new_password2
+    
+    def validate(self, attrs):
+        """
+        Cross-field validation - form'daki clean ile aynı
+        """
+        new_password1 = attrs.get('new_password1')
+        new_password2 = attrs.get('new_password2')
+        current_password = attrs.get('current_password')
+        
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise serializers.ValidationError({
+                    'new_password2': 'Yeni şifreler eşleşmiyor'
+                })
+        
+        if current_password and new_password1:
+            if current_password == new_password1:
+                raise serializers.ValidationError({
+                    'new_password1': 'Yeni şifre mevcut şifre ile aynı olamaz'
+                })
+        
+        return attrs
+    
+    def save(self):
+        """
+        Kullanıcının şifresini güncelle - form'daki save ile aynı
+        """
+        if not self.user:
+            raise serializers.ValidationError('User not provided')
+        
+        new_password = self.validated_data['new_password1']
+        self.user.set_password(new_password)
+        self.user.save()
+        return self.user
+
+
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """
     Password reset confirm serializer - accounts/forms.py PasswordResetConfirmForm'a benzer mantık

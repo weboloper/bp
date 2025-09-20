@@ -14,7 +14,8 @@ from .serializers import (
     UserRegistrationSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
-    EmailVerificationResendSerializer
+    EmailVerificationResendSerializer,
+    PasswordChangeSerializer
 )
 
 User = get_user_model()
@@ -175,6 +176,45 @@ class PasswordResetConfirmAPIView(APIView):
                 {'detail': 'Sıfırlama linki geçersiz veya süresi dolmuş'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+
+class PasswordChangeAPIView(APIView):
+    """
+    Password change endpoint for authenticated users
+    accounts/views.py password_change_view'e benzer mantık
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Change user password
+        """
+        serializer = PasswordChangeSerializer(data=request.data, user=request.user)
+        
+        if serializer.is_valid():
+            try:
+                # Save new password
+                serializer.save()
+                
+                # Note: In JWT setup, tokens remain valid after password change
+                # If you want to invalidate existing tokens, you need to:
+                # 1. Add token blacklisting
+                # 2. Or change user's password salt
+                # 3. Or add a "password_changed_at" field to user model
+                
+                return Response(
+                    {'detail': 'Şifreniz başarıyla değiştirildi'}, 
+                    status=status.HTTP_200_OK
+                )
+                
+            except Exception as e:
+                return Response(
+                    {'detail': 'Şifre değiştirme sırasında hata oluştu'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class EmailVerificationResendAPIView(APIView):
