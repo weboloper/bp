@@ -11,7 +11,9 @@ from .views import (
     PasswordResetConfirmAPIView,
     EmailVerificationResendAPIView,
     EmailVerificationConfirmAPIView,
-    PasswordChangeAPIView
+    PasswordChangeAPIView,
+    EmailChangeAPIView,
+    EmailChangeConfirmAPIView
 )
 # Cookie-based views (Farklı host için devre dışı)
 # from .auth_views import (
@@ -40,6 +42,10 @@ urlpatterns = [
     
     # Password change endpoint (authenticated)
     path('auth/password-change/', PasswordChangeAPIView.as_view(), name='password_change'),
+    
+    # Email change endpoints (authenticated)
+    path('auth/email-change/', EmailChangeAPIView.as_view(), name='email_change'),
+    path('auth/email-change-confirm/<uidb64>/<token>/<new_email_b64>/', EmailChangeConfirmAPIView.as_view(), name='email_change_confirm'),
     
     # User profile endpoint
     path('me/', MeAPIView.as_view(), name='current_user'),

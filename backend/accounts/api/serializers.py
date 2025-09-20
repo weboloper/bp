@@ -260,6 +260,57 @@ class PasswordChangeSerializer(serializers.Serializer):
         return self.user
 
 
+class EmailChangeSerializer(serializers.Serializer):
+    """
+    Email change serializer - accounts/forms.py EmailChangeForm'a benzer mantık
+    """
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_email = serializers.EmailField(required=True)
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    def validate_current_password(self, value):
+        """
+        Current password validation - form'daki clean_current_password ile aynı
+        """
+        current_password = value
+        
+        if not current_password:
+            raise serializers.ValidationError('Mevcut şifrenizi girin')
+        
+        # Check if current password is correct
+        if self.user and not self.user.check_password(current_password):
+            raise serializers.ValidationError('Mevcut şifre yanlış')
+        
+        return current_password
+    
+    def validate_new_email(self, value):
+        """
+        New email validation - form'daki clean_new_email ile aynı
+        """
+        new_email = value.strip().lower()
+        
+        if not new_email:
+            raise serializers.ValidationError('Yeni email adresi gerekli')
+        
+        # Check if same as current email
+        if self.user and new_email == self.user.email.lower():
+            raise serializers.ValidationError('Yeni email adresi mevcut email ile aynı olamaz')
+        
+        # Django's built-in email validation (already handled by EmailField)
+        # But we do additional checks
+        
+        # Check if email already exists
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        if User.objects.filter(email__iexact=new_email).exists():
+            raise serializers.ValidationError('Bu email adresi zaten kullanılıyor')
+        
+        return new_email
+
+
 class PasswordResetConfirmSerializer(serializers.Serializer):
     """
     Password reset confirm serializer - accounts/forms.py PasswordResetConfirmForm'a benzer mantık

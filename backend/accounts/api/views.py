@@ -15,7 +15,8 @@ from .serializers import (
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     EmailVerificationResendSerializer,
-    PasswordChangeSerializer
+    PasswordChangeSerializer,
+    EmailChangeSerializer
 )
 
 User = get_user_model()
@@ -76,6 +77,135 @@ class RegisterAPIView(APIView):
         
         # Return validation errors - DRF default format
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EmailChangeAPIView(APIView):
+    """
+    Email change request endpoint for authenticated users
+    accounts/views.py email_change_view'e benzer mantık
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Request email change - sends confirmation to new email
+        """
+        serializer = EmailChangeSerializer(data=request.data, user=request.user)
+        
+        if serializer.is_valid():
+            try:
+                new_email = serializer.validated_data['new_email']
+                
+                # Generate email change token - email_change_view ile aynı
+                token = default_token_generator.make_token(request.user)
+                uid = urlsafe_base64_encode(force_bytes(request.user.pk))
+                
+                # Create confirmation link
+                confirmation_link = f"{settings.FRONTEND_URL}/accounts/email-change-confirm/{uid}/{token}/{urlsafe_base64_encode(force_bytes(new_email))}/"
+                
+                # Send confirmation email to NEW email address - email_change_view ile aynı
+                try:
+                    EmailService.send_critical_email(
+                        template_name='accounts/emails/email_change_confirmation',
+                        context={
+                            'user': request.user,
+                            'old_email': request.user.email,
+                            'new_email': new_email,
+                            'confirmation_link': confirmation_link,
+                            'site_url': settings.FRONTEND_URL,
+                        },
+                        subject='Email Değişikliği Onayı - BP Django App',
+                        recipient_list=[new_email]
+                    )
+                    
+                    return Response(
+                        {'detail': f'Email değişiklik onayı {new_email} adresine gönderildi. Lütfen emailinizi kontrol edin.'}, 
+                        status=status.HTTP_200_OK
+                    )
+                    
+                except Exception as e:
+                    print(f"Email change confirmation email failed: {e}")
+                    return Response(
+                        {'detail': 'Email gönderimi başarısız. Lütfen tekrar deneyin.'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                
+            except Exception as e:
+                return Response(
+                    {'detail': 'Email değişiklik talebi sırasında hata oluştu'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class EmailChangeConfirmAPIView(APIView):
+    """
+    Email change confirmation endpoint
+    accounts/views.py email_change_confirm_view'e benzer mantık
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request, uidb64, token, new_email_b64):
+        """
+        Confirm email change with token
+        """
+        try:
+            # Decode user ID and new email - email_change_confirm_view ile aynı
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+            new_email = force_str(urlsafe_base64_decode(new_email_b64))
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {'detail': 'Geçersiz email değişiklik linki'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if token is valid
+        if user is not None and default_token_generator.check_token(user, token) and new_email:
+            # Check if new email is still available - email_change_confirm_view ile aynı
+            if User.objects.filter(email__iexact=new_email).exists():
+                return Response(
+                    {'detail': 'Bu email adresi artık kullanılıyor. Lütfen farklı bir email deneyin.'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            old_email = user.email
+            
+            # Update user email
+            user.email = new_email
+            user.save()
+            
+            # Send notification to OLD email address - email_change_confirm_view ile aynı
+            try:
+                from django.utils import timezone
+                EmailService.send_critical_email(
+                    template_name='accounts/emails/email_change_notification',
+                    context={
+                        'user': user,
+                        'old_email': old_email,
+                        'new_email': new_email,
+                        'change_date': timezone.now(),
+                        'site_url': settings.FRONTEND_URL,
+                    },
+                    subject='Email Adresi Değiştirildi - BP Django App',
+                    recipient_list=[old_email]
+                )
+            except Exception as e:
+                print(f"Email change notification failed: {e}")
+            
+            return Response({
+                'detail': f'Email adresiniz başarıyla {new_email} olarak değiştirildi.',
+                'old_email': old_email,
+                'new_email': new_email
+            }, status=status.HTTP_200_OK)
+        else:
+            # Invalid token
+            return Response(
+                {'detail': 'Email değişiklik linki geçersiz veya süresi dolmuş'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class PasswordResetAPIView(APIView):
