@@ -303,10 +303,10 @@ class GoogleSocialLoginSerializer(serializers.Serializer):
             
             return user_data
             
-        except requests.RequestException:
-            raise serializers.ValidationError('Google token doğrulama sırasında hata oluştu')
+        except requests.RequestException as e:
+            raise serializers.ValidationError(f'Google token doğrulama sırasında network hatası: {str(e)}')
         except Exception as e:
-            raise serializers.ValidationError('Google login sırasında hata oluştu')
+            raise serializers.ValidationError(f'Google login sırasında hata oluştu: {str(e)}')
     
     def get_or_create_user(self, google_user_data):
         """
@@ -350,14 +350,32 @@ class GoogleSocialLoginSerializer(serializers.Serializer):
                 is_verified=True  # Social login ile verified
             )
             
-            # Profile oluştur
-            from accounts.models import Profile
-            Profile.objects.create(
-                user=user,
-                bio='Joined via Google'
-            )
+            # Profile oluştur (hata varsa atla)
+            try:
+                from accounts.models import Profile
+                Profile.objects.create(
+                    user=user,
+                    bio='Joined via Google'
+                )
+            except Exception as profile_error:
+                # Profile oluşturulamasa bile devam et
+                print(f"Google login - Profile oluşturma hatası: {profile_error}")
             
             return user
+    
+    def save(self):
+        """
+        Google access token'i verify et ve user döndür
+        """
+        access_token = self.validated_data['access_token']
+        
+        # Google token'i verify et
+        google_user_data = self.verify_google_token(access_token)
+        
+        # User oluştur/getir
+        user = self.get_or_create_user(google_user_data)
+        
+        return user
     
     def generate_jwt_tokens(self, user):
         """
@@ -469,14 +487,32 @@ class FacebookSocialLoginSerializer(serializers.Serializer):
                 is_verified=True  # Social login ile verified
             )
             
-            # Profile oluştur
-            from accounts.models import Profile
-            Profile.objects.create(
-                user=user,
-                bio='Joined via Facebook'
-            )
+            # Profile oluştur (hata varsa atla)
+            try:
+                from accounts.models import Profile
+                Profile.objects.create(
+                    user=user,
+                    bio='Joined via Facebook'
+                )
+            except Exception as profile_error:
+                # Profile oluşturulamasa bile devam et
+                print(f"Facebook login - Profile oluşturma hatası: {profile_error}")
             
             return user
+    
+    def save(self):
+        """
+        Facebook access token'i verify et ve user döndür
+        """
+        access_token = self.validated_data['access_token']
+        
+        # Facebook token'i verify et
+        facebook_user_data = self.verify_facebook_token(access_token)
+        
+        # User oluştur/getir
+        user = self.get_or_create_user(facebook_user_data)
+        
+        return user
     
     def generate_jwt_tokens(self, user):
         """
@@ -611,14 +647,32 @@ class AppleSocialLoginSerializer(serializers.Serializer):
                 is_verified=True  # Social login ile verified
             )
             
-            # Profile oluştur
-            from accounts.models import Profile
-            Profile.objects.create(
-                user=user,
-                bio='Joined via Apple'
-            )
+            # Profile oluştur (hata varsa atla)
+            try:
+                from accounts.models import Profile
+                Profile.objects.create(
+                    user=user,
+                    bio='Joined via Apple'
+                )
+            except Exception as profile_error:
+                # Profile oluşturulamasa bile devam et
+                print(f"Apple login - Profile oluşturma hatası: {profile_error}")
             
             return user
+    
+    def save(self):
+        """
+        Apple identity token'i verify et ve user döndür
+        """
+        identity_token = self.validated_data['identity_token']
+        
+        # Apple token'i verify et
+        apple_user_data = self.verify_apple_token(identity_token)
+        
+        # User oluştur/getir
+        user = self.get_or_create_user(apple_user_data)
+        
+        return user
     
     def generate_jwt_tokens(self, user):
         """
