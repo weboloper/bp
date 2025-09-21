@@ -512,6 +512,18 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Bizim kendi email verification'ımızı kullanıyoruz
 ACCOUNT_USERNAME_REQUIRED = False
 SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+# from allauth.socialaccount.models import SocialApp
+# from django.contrib.sites.models import Site
+
+# site = Site.objects.get(id=1)
+# app = SocialApp.objects.create(
+#     provider='google',
+#     name='Google',
+#     client_id='xxx',
+#     secret='yyy'
+# )
+# app.sites.add(site)
 
 # Social login ayarları
 SOCIALACCOUNT_ADAPTER = 'accounts.adapters.CustomSocialAccountAdapter'

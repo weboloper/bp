@@ -1,9 +1,11 @@
 {% extends 'accounts/base_public.html' %}
 
+{% load socialaccount %}
+
 {% block main_content %}
 <div class="auth-card">
     <h2>Giriş Yap</h2>
-    
+    <a href="{% provider_login_url 'google' %}">Google ile Giriş</a>
     <form method="post">
         {% csrf_token %}
         
