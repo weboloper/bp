@@ -500,7 +500,7 @@ FACEBOOK_APP_ID = env('FACEBOOK_APP_ID', default='')
 FACEBOOK_APP_SECRET = env('FACEBOOK_APP_SECRET', default='')
 
 # Apple OAuth credentials
-APPLE_SERVICE_ID = env('APPLE_SERVICE_ID', default='')  # Service ID (App ID)
-APPLE_TEAM_ID = env('APPLE_TEAM_ID', default='')  # Apple Team ID
+APPLE_CLIENT_ID = env('APPLE_CLIENT_ID', default='')  # Service ID (Bundle ID)
+APPLE_SECRET = env('APPLE_SECRET', default='')  # Client Secret (opsiyonel)
 APPLE_KEY_ID = env('APPLE_KEY_ID', default='')  # Key ID
-APPLE_PRIVATE_KEY_PATH = env('APPLE_PRIVATE_KEY_PATH', default='')  # Path to .p8 file
+APPLE_TEAM_ID = env('APPLE_TEAM_ID', default='')  # Apple Team ID

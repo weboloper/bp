@@ -72,10 +72,10 @@ Apple Sign In artık hem login hem de register sayfalarında mevcut.
 
 ```bash
 # Apple OAuth credentials
-APPLE_SERVICE_ID=com.yourcompany.yourapp.web  # Services ID
-APPLE_TEAM_ID=ABC123XYZ  # Apple Developer Team ID
+APPLE_CLIENT_ID=com.yourcompany.yourapp.web  # Services ID
+APPLE_SECRET=  # Client Secret (opsiyonel, şu an kullanılmıyor)
 APPLE_KEY_ID=ABC123  # Key ID (opsiyonel)
-APPLE_PRIVATE_KEY_PATH=/path/to/AuthKey_ABC123.p8  # .p8 file path (opsiyonel)
+APPLE_TEAM_ID=ABC123XYZ  # Apple Developer Team ID
 ```
 
 **Team ID'yi bulmak:**

@@ -532,7 +532,7 @@ def apple_login_view(request):
     
     # OAuth parametreleri
     params = {
-        'client_id': settings.APPLE_SERVICE_ID,
+        'client_id': settings.APPLE_CLIENT_ID,  # ✔️ Güncellendi
         'redirect_uri': redirect_uri,
         'response_type': 'code id_token',
         'response_mode': 'form_post',
@@ -712,4 +712,102 @@ def google_callback_view(request):
         return redirect('accounts:login')
     except Exception as e:
         messages.error(request, f'Google login başarısız: {str(e)}')
+        return redirect('accounts:login')
+
+def facebook_login_view(request):
+    """Facebook OAuth login başlatma"""
+    # Facebook OAuth URL'i oluştur
+    facebook_auth_url = 'https://www.facebook.com/v18.0/dialog/oauth'
+    
+    # Redirect URI - callback URL
+    redirect_uri = request.build_absolute_uri('/accounts/facebook-callback/')
+    
+    # State parametresi - CSRF koruması için
+    state = secrets.token_urlsafe(32)
+    request.session['facebook_oauth_state'] = state
+    
+    # OAuth parametreleri
+    params = {
+        'client_id': settings.FACEBOOK_APP_ID,
+        'redirect_uri': redirect_uri,
+        'state': state,
+        'scope': 'email,public_profile',
+        'response_type': 'code',
+    }
+    
+    # Facebook OAuth URL'ine yönlendir
+    auth_url = f"{facebook_auth_url}?{urllib.parse.urlencode(params)}"
+    return redirect(auth_url)
+
+def facebook_callback_view(request):
+    """Facebook OAuth callback - Full BaseSocialAuth Pattern"""
+    # Hata kontrolü
+    error = request.GET.get('error')
+    if error:
+        error_description = request.GET.get('error_description', 'Bilinmeyen hata')
+        messages.error(request, f'Facebook login iptal edildi: {error_description}')
+        return redirect('accounts:login')
+    
+    # Authorization code al
+    code = request.GET.get('code')
+    state = request.GET.get('state')
+    
+    if not code or not state:
+        messages.error(request, 'Facebook login başarısız: Eksik parametreler')
+        return redirect('accounts:login')
+    
+    # State doğrulama (CSRF koruması)
+    stored_state = request.session.get('facebook_oauth_state')
+    if not stored_state or state != stored_state:
+        messages.error(request, 'Facebook login başarısız: Güvenlik doğrulaması başarısız')
+        return redirect('accounts:login')
+    
+    # State'i temizle
+    del request.session['facebook_oauth_state']
+    
+    try:
+        # Authorization code ile access token al
+        token_url = 'https://graph.facebook.com/v18.0/oauth/access_token'
+        redirect_uri = request.build_absolute_uri('/accounts/facebook-callback/')
+        
+        token_params = {
+            'client_id': settings.FACEBOOK_APP_ID,
+            'client_secret': settings.FACEBOOK_APP_SECRET,
+            'code': code,
+            'redirect_uri': redirect_uri,
+        }
+        
+        token_response = requests.get(token_url, params=token_params, timeout=10)
+        
+        if token_response.status_code != 200:
+            messages.error(request, 'Facebook login başarısız: Token alınamadı')
+            return redirect('accounts:login')
+        
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        
+        if not access_token:
+            messages.error(request, 'Facebook login başarısız: Access token bulunamadı')
+            return redirect('accounts:login')
+        
+        # BaseSocialAuth FULL FLOW - Google ve Apple ile aynı pattern!
+        from accounts.social_auth import FacebookAuth
+        
+        facebook_auth = FacebookAuth()
+        user = facebook_auth.authenticate(access_token)
+        
+        # Kullanıcıyı login et
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        messages.success(request, f'Facebook ile giriş başarılı! Hoş geldin {user.username}!')
+        
+        return redirect('accounts:profile')
+        
+    except ValidationError as e:
+        messages.error(request, f'Facebook login başarısız: {str(e)}')
+        return redirect('accounts:login')
+    except requests.RequestException as e:
+        messages.error(request, f'Facebook login başarısız: Network hatası - {str(e)}')
+        return redirect('accounts:login')
+    except Exception as e:
+        messages.error(request, f'Facebook login başarısız: {str(e)}')
         return redirect('accounts:login')

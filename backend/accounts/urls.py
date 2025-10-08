@@ -35,4 +35,8 @@ urlpatterns = [
     # Apple OAuth urls
     path('apple-login/', views.apple_login_view, name='apple_login'),
     path('apple-callback/', views.apple_callback_view, name='apple_callback'),
+    
+    # Facebook OAuth urls
+    path('facebook-login/', views.facebook_login_view, name='facebook_login'),
+    path('facebook-callback/', views.facebook_callback_view, name='facebook_callback'),
 ]
