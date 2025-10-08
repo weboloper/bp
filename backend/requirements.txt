@@ -3,6 +3,9 @@ Django==5.2.5
 djangorestframework==3.16.0
 django-cors-headers==4.7.0
 
+# HTTP Requests
+requests==2.31.0
+
 # Database
 psycopg2-binary==2.9.10
 dj-database-url==2.1.0

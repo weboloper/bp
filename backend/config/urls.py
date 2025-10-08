@@ -35,7 +35,6 @@ urlpatterns = [
     
     # App URLs
     path('accounts/', include('accounts.urls')),
-    path('accountz/', include('allauth.urls')),
     # API endpoints
     path("api/", include([
         path('', api_root, name='api_root'),

@@ -13,6 +13,10 @@ from core.email_service import EmailService
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
+import requests
+import secrets
+import urllib.parse
+from accounts.social_auth import GoogleAuth
 
 def register_view(request):
     if request.method == 'POST':
@@ -513,3 +517,199 @@ def username_change_view(request):
         })
     
     return render(request, 'accounts/private/username_change.html')
+
+def apple_login_view(request):
+    """Apple Sign In başlatma"""
+    # Apple OAuth URL'i oluştur
+    apple_auth_url = 'https://appleid.apple.com/auth/authorize'
+    
+    # Redirect URI - callback URL
+    redirect_uri = request.build_absolute_uri('/accounts/apple-callback/')
+    
+    # State parametresi - CSRF koruması için
+    state = secrets.token_urlsafe(32)
+    request.session['apple_oauth_state'] = state
+    
+    # OAuth parametreleri
+    params = {
+        'client_id': settings.APPLE_SERVICE_ID,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code id_token',
+        'response_mode': 'form_post',
+        'scope': 'name email',
+        'state': state,
+    }
+    
+    # Apple OAuth URL'ine yönlendir
+    auth_url = f"{apple_auth_url}?{urllib.parse.urlencode(params)}"
+    return redirect(auth_url)
+
+def apple_callback_view(request):
+    """Apple Sign In callback - Full BaseSocialAuth Pattern"""
+    # Apple, form_post mode kullanır, POST request gelir
+    if request.method != 'POST':
+        messages.error(request, 'Apple login başarısız: Geçersiz request')
+        return redirect('accounts:login')
+    
+    # Hata kontrolü
+    error = request.POST.get('error')
+    if error:
+        messages.error(request, f'Apple login iptal edildi: {error}')
+        return redirect('accounts:login')
+    
+    # Authorization code ve user data al
+    code = request.POST.get('code')
+    id_token = request.POST.get('id_token')
+    user_json = request.POST.get('user')  # İlk login'de gelir
+    state = request.POST.get('state')
+    
+    if not id_token or not state:
+        messages.error(request, 'Apple login başarısız: Eksik parametreler')
+        return redirect('accounts:login')
+    
+    # State doğrulama (CSRF koruması)
+    stored_state = request.session.get('apple_oauth_state')
+    if not stored_state or state != stored_state:
+        messages.error(request, 'Apple login başarısız: Güvenlik doğrulaması başarısız')
+        return redirect('accounts:login')
+    
+    # State'i temizle
+    del request.session['apple_oauth_state']
+    
+    try:
+        # BaseSocialAuth FULL FLOW - Google ile aynı pattern!
+        from accounts.social_auth import AppleAuth
+        
+        apple_auth = AppleAuth()
+        user = apple_auth.authenticate(id_token)
+        
+        # Apple'a özel: İlk login'de isim bilgisi ayrı JSON'da gelir
+        # Bu bilgiyi yakalayarak user'ı güncelle
+        if user_json:
+            try:
+                import json
+                user_info = json.loads(user_json)
+                name = user_info.get('name', {})
+                first_name = name.get('firstName', '')
+                last_name = name.get('lastName', '')
+                
+                # Sadece isim boşsa güncelle (ilk login)
+                if first_name and not user.first_name:
+                    user.first_name = first_name
+                if last_name and not user.last_name:
+                    user.last_name = last_name
+                    user.save()
+            except Exception as e:
+                # İsim bilgisi alınamazsa devam et
+                print(f"Apple login - İsim bilgisi alınamadı: {e}")
+        
+        # Kullanıcıyı login et
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        messages.success(request, f'Apple ile giriş başarılı! Hoş geldin {user.username}!')
+        
+        return redirect('accounts:profile')
+        
+    except ValidationError as e:
+        messages.error(request, f'Apple login başarısız: {str(e)}')
+        return redirect('accounts:login')
+    except Exception as e:
+        messages.error(request, f'Apple login başarısız: {str(e)}')
+        return redirect('accounts:login')
+
+def google_login_view(request):
+    """Google OAuth login başlatma"""
+    # Google OAuth URL'i oluştur
+    google_auth_url = 'https://accounts.google.com/o/oauth2/v2/auth'
+    
+    # Redirect URI - callback URL
+    redirect_uri = request.build_absolute_uri('/accounts/google-callback/')
+    
+    # State parametresi - CSRF koruması için
+    state = secrets.token_urlsafe(32)
+    request.session['google_oauth_state'] = state
+    
+    # OAuth parametreleri
+    params = {
+        'client_id': settings.GOOGLE_OAUTH2_CLIENT_ID,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'state': state,
+        'access_type': 'online',
+        'prompt': 'select_account'
+    }
+    
+    # Google OAuth URL'ine yönlendir
+    auth_url = f"{google_auth_url}?{urllib.parse.urlencode(params)}"
+    return redirect(auth_url)
+
+def google_callback_view(request):
+    """Google OAuth callback - Refactored with BaseSocialAuth"""
+    # Hata kontrolü
+    error = request.GET.get('error')
+    if error:
+        messages.error(request, f'Google login iptal edildi: {error}')
+        return redirect('accounts:login')
+    
+    # Authorization code al
+    code = request.GET.get('code')
+    state = request.GET.get('state')
+    
+    if not code or not state:
+        messages.error(request, 'Google login başarısız: Eksik parametreler')
+        return redirect('accounts:login')
+    
+    # State doğrulama (CSRF koruması)
+    stored_state = request.session.get('google_oauth_state')
+    if not stored_state or state != stored_state:
+        messages.error(request, 'Google login başarısız: Güvenlik doğrulaması başarısız')
+        return redirect('accounts:login')
+    
+    # State'i temizle
+    del request.session['google_oauth_state']
+    
+    try:
+        # Authorization code ile access token al
+        token_url = 'https://oauth2.googleapis.com/token'
+        redirect_uri = request.build_absolute_uri('/accounts/google-callback/')
+        
+        token_data = {
+            'code': code,
+            'client_id': settings.GOOGLE_OAUTH2_CLIENT_ID,
+            'client_secret': settings.GOOGLE_OAUTH2_CLIENT_SECRET,
+            'redirect_uri': redirect_uri,
+            'grant_type': 'authorization_code'
+        }
+        
+        token_response = requests.post(token_url, data=token_data, timeout=10)
+        
+        if token_response.status_code != 200:
+            messages.error(request, 'Google login başarısız: Token alınamadı')
+            return redirect('accounts:login')
+        
+        token_json = token_response.json()
+        access_token = token_json.get('access_token')
+        
+        if not access_token:
+            messages.error(request, 'Google login başarısız: Access token bulunamadı')
+            return redirect('accounts:login')
+        
+        # BaseSocialAuth kullanarak authenticate et
+        google_auth = GoogleAuth()
+        user = google_auth.authenticate(access_token)
+        
+        # Kullanıcıyı login et
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        messages.success(request, f'Google ile giriş başarılı! Hoş geldin {user.username}!')
+        
+        return redirect('accounts:profile')
+        
+    except ValidationError as e:
+        messages.error(request, f'Google login başarısız: {str(e)}')
+        return redirect('accounts:login')
+    except requests.RequestException as e:
+        messages.error(request, f'Google login başarısız: Network hatası - {str(e)}')
+        return redirect('accounts:login')
+    except Exception as e:
+        messages.error(request, f'Google login başarısız: {str(e)}')
+        return redirect('accounts:login')
