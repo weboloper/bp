@@ -328,17 +328,50 @@ if not DEBUG:
         f"https://www.{env('DOMAIN', default='yourdomain.com')}",
     ]
 
-# Celery Configuration (only works in Docker, not cPanel)
-if not os.path.exists('/home'):  # Not cPanel
+# Redis Health Check Function
+def check_redis_connection():
+    """Redis bağlantısını kontrol et"""
+    try:
+        import redis
+        redis_url = env('REDIS_URL', default='redis://redis:6379/0')
+        
+        # Parse Redis URL
+        if redis_url.startswith('redis://'):
+            # redis://redis:6379/0 formatı
+            parts = redis_url.replace('redis://', '').split(':')
+            host = parts[0]
+            port_db = parts[1].split('/')
+            port = int(port_db[0])
+            db = int(port_db[1]) if len(port_db) > 1 else 0
+        else:
+            host, port, db = 'localhost', 6379, 0
+        
+        r = redis.Redis(host=host, port=port, db=db, socket_timeout=2)
+        r.ping()
+        print(f"✅ Redis connection successful: {host}:{port}/{db}")
+        return True
+    except Exception as e:
+        print(f"⚠️ Redis connection failed: {e}")
+        return False
+
+# Redis durumunu kontrol et
+REDIS_AVAILABLE = check_redis_connection()
+
+# Celery Configuration
+if REDIS_AVAILABLE:
     CELERY_BROKER_URL = env('REDIS_URL', default='redis://redis:6379/0')
     CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://redis:6379/0')
     CELERY_ACCEPT_CONTENT = ['json']
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_TIMEZONE = TIME_ZONE
+    print("🚀 Celery configured with Redis")
+else:
+    print("📧 Celery disabled - Redis not available")
 
 # Cache Configuration
-if not os.path.exists('/home'):  # Docker
+if REDIS_AVAILABLE:
+    # Redis Cache
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
@@ -348,13 +381,34 @@ if not os.path.exists('/home'):  # Docker
             }
         }
     }
-else:  # cPanel - use database cache
-    CACHES = {
-        'default': {
-            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-            'LOCATION': 'django_cache_table',
+    print("🗄️ Redis cache enabled")
+else:
+    # Fallback cache (you can choose: dummy, database, or locmem)
+    cache_backend = env('FALLBACK_CACHE_BACKEND', default='dummy')  # dummy, database, locmem
+    
+    if cache_backend == 'database':
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+                'LOCATION': 'django_cache_table',
+            }
         }
-    }
+        print("🗄️ Database cache enabled")
+    elif cache_backend == 'locmem':
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+                'LOCATION': 'unique-snowflake',
+            }
+        }
+        print("🗄️ Local memory cache enabled")
+    else:
+        CACHES = {
+            'default': {
+                'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+            }
+        }
+        print("🗄️ Dummy cache enabled (development)")
 
 # Security settings for production
 if not DEBUG:
@@ -397,11 +451,17 @@ SENTRY_DSN = env('SENTRY_DSN', default=None)
 #         release=env('APP_VERSION', default='1.0.0'),
 #     )
 
-# Email Configuration
-USE_ASYNC_EMAIL = env('USE_ASYNC_EMAIL')
+# Email Configuration - Redis durumuna göre
+USE_ASYNC_EMAIL = REDIS_AVAILABLE and env('USE_ASYNC_EMAIL', default=False)
+print(f"📧 Async email: {'Enabled' if USE_ASYNC_EMAIL else 'Disabled'}")
 
 # Email backend configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+if DEBUG and not env('EMAIL_HOST_USER', default=''):
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    print("📧 Using console email backend (development)")
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    print("📧 Using SMTP email backend")
 
 # Email Settings (Universal - works with any SMTP provider)
 EMAIL_HOST = env('EMAIL_HOST', default='localhost')
@@ -411,9 +471,7 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 
-# Console backend for development
-if DEBUG and not EMAIL_HOST_USER:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Email backend artık yukarıda Redis durumuna göre ayarlandı
 
 if CURRENT_ENV == 'staging':
     # Staging specific settings
@@ -427,3 +485,22 @@ else:
     # Development specific settings
     print("Running in DEVELOPMENT mode")
     pass
+
+# Minimal configuration - sadece backend API için kullanacağız
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+# Google OAuth credentials
+GOOGLE_OAUTH2_CLIENT_ID = env('GOOGLE_OAUTH2_CLIENT_ID', default='')
+GOOGLE_OAUTH2_CLIENT_SECRET = env('GOOGLE_OAUTH2_CLIENT_SECRET', default='')
+
+# Facebook OAuth credentials
+FACEBOOK_APP_ID = env('FACEBOOK_APP_ID', default='')
+FACEBOOK_APP_SECRET = env('FACEBOOK_APP_SECRET', default='')
+
+# Apple OAuth credentials
+APPLE_CLIENT_ID = env('APPLE_CLIENT_ID', default='')  # Service ID (Bundle ID)
+APPLE_SECRET = env('APPLE_SECRET', default='')  # Client Secret (opsiyonel)
+APPLE_KEY_ID = env('APPLE_KEY_ID', default='')  # Key ID
+APPLE_TEAM_ID = env('APPLE_TEAM_ID', default='')  # Apple Team ID

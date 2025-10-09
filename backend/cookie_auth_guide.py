@@ -9,7 +9,7 @@ import requests
 import json
 
 # Base URL
-BASE_URL = "http://localhost:8000/api/v1/accounts"
+BASE_URL = "http://localhost:8000/api/accounts"
 
 def demo_cookie_authentication():
     """
@@ -22,7 +22,7 @@ def demo_cookie_authentication():
     
     # 1. LOGIN - Cookie'leri alır
     print("1️⃣  LOGIN:")
-    print("POST /api/v1/accounts/auth/login-cookie/")
+    print("POST /api/accounts/auth/login-cookie/")
     print("Body: {username, password}")
     
     login_response = session.post(f"{BASE_URL}/auth/login-cookie/", json={
@@ -38,7 +38,7 @@ def demo_cookie_authentication():
         
         # 2. TOKEN VERIFY - Cookie'den token'ı kontrol eder
         print("\n2️⃣  TOKEN VERIFY (Cookie):")
-        print("POST /api/v1/accounts/auth/token/verify-cookie/")
+        print("POST /api/accounts/auth/token/verify-cookie/")
         print("Body: {} (Cookie'den otomatik alır)")
         
         verify_response = session.post(f"{BASE_URL}/auth/token/verify-cookie/", json={})
@@ -47,7 +47,7 @@ def demo_cookie_authentication():
         
         # 3. TOKEN REFRESH - Cookie'deki refresh token ile access token yeniler
         print("\n3️⃣  TOKEN REFRESH (Cookie):")
-        print("POST /api/v1/accounts/auth/token/refresh-cookie/")
+        print("POST /api/accounts/auth/token/refresh-cookie/")
         print("Body: {} (Refresh cookie'den otomatik alır)")
         
         refresh_response = session.post(f"{BASE_URL}/auth/token/refresh-cookie/", json={})
@@ -56,7 +56,7 @@ def demo_cookie_authentication():
         
         # 4. LOGOUT - Cookie'leri temizler
         print("\n4️⃣  LOGOUT:")
-        print("POST /api/v1/accounts/auth/logout-cookie/")
+        print("POST /api/accounts/auth/logout-cookie/")
         print("Body: {}")
         
         logout_response = session.post(f"{BASE_URL}/auth/logout-cookie/", json={})
@@ -65,7 +65,7 @@ def demo_cookie_authentication():
         
         # 5. LOGOUT SONRASI VERIFY - Artık token geçersiz olmalı
         print("\n5️⃣  VERIFY AFTER LOGOUT:")
-        print("POST /api/v1/accounts/auth/token/verify-cookie/")
+        print("POST /api/accounts/auth/token/verify-cookie/")
         
         verify_after_logout = session.post(f"{BASE_URL}/auth/token/verify-cookie/", json={})
         print(f"Status: {verify_after_logout.status_code}")
@@ -88,9 +88,9 @@ def compare_json_vs_cookie():
     print("   - XSS saldırılarına açık")
     print("   - Manuel token yönetimi gerekli")
     print("   URLs:")
-    print("     • POST /api/v1/accounts/auth/login/ (Django Simple JWT)")
-    print("     • POST /api/v1/accounts/auth/token/refresh/ (Django Simple JWT)")
-    print("     • POST /api/v1/accounts/auth/token/verify/ (Django Simple JWT)")
+    print("     • POST /api/accounts/auth/login/ (Django Simple JWT)")
+    print("     • POST /api/accounts/auth/token/refresh/ (Django Simple JWT)")
+    print("     • POST /api/accounts/auth/token/verify/ (Django Simple JWT)")
     
     print("\n🍪 Cookie-based (Güvenli):")
     print("   - Token'lar httpOnly cookie'lerde saklanır")
@@ -98,10 +98,10 @@ def compare_json_vs_cookie():
     print("   - XSS saldırılarına karşı korumalı")
     print("   - CSRF token ile ek güvenlik")
     print("   URLs:")
-    print("     • POST /api/v1/accounts/auth/login-cookie/")
-    print("     • POST /api/v1/accounts/auth/logout-cookie/")
-    print("     • POST /api/v1/accounts/auth/token/verify-cookie/")
-    print("     • POST /api/v1/accounts/auth/token/refresh-cookie/")
+    print("     • POST /api/accounts/auth/login-cookie/")
+    print("     • POST /api/accounts/auth/logout-cookie/")
+    print("     • POST /api/accounts/auth/token/verify-cookie/")
+    print("     • POST /api/accounts/auth/token/refresh-cookie/")
 
 
 def frontend_usage_examples():
@@ -113,7 +113,7 @@ def frontend_usage_examples():
     print("🟦 JavaScript Fetch API:")
     print('''
 // Login
-const loginResponse = await fetch('/api/v1/accounts/auth/login-cookie/', {
+const loginResponse = await fetch('/api/accounts/auth/login-cookie/', {
     method: 'POST',
     headers: {
         'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ const loginResponse = await fetch('/api/v1/accounts/auth/login-cookie/', {
 });
 
 // Token verify (Cookie otomatik gönderilir)
-const verifyResponse = await fetch('/api/v1/accounts/auth/token/verify-cookie/', {
+const verifyResponse = await fetch('/api/accounts/auth/token/verify-cookie/', {
     method: 'POST',
     headers: {
         'X-CSRFToken': getCookie('csrftoken')
@@ -136,7 +136,7 @@ const verifyResponse = await fetch('/api/v1/accounts/auth/token/verify-cookie/',
 });
 
 // Logout
-const logoutResponse = await fetch('/api/v1/accounts/auth/logout-cookie/', {
+const logoutResponse = await fetch('/api/accounts/auth/logout-cookie/', {
     method: 'POST',
     headers: {
         'X-CSRFToken': getCookie('csrftoken')
@@ -150,7 +150,7 @@ const logoutResponse = await fetch('/api/v1/accounts/auth/logout-cookie/', {
 // API Service
 class AuthService {
     async login(username, password) {
-        const response = await fetch('/api/v1/accounts/auth/login-cookie/', {
+        const response = await fetch('/api/accounts/auth/login-cookie/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -168,7 +168,7 @@ class AuthService {
     }
     
     async logout() {
-        await fetch('/api/v1/accounts/auth/logout-cookie/', {
+        await fetch('/api/accounts/auth/logout-cookie/', {
             method: 'POST',
             headers: {
                 'X-CSRFToken': this.getCSRFToken()
@@ -178,7 +178,7 @@ class AuthService {
     }
     
     async verifyToken() {
-        const response = await fetch('/api/v1/accounts/auth/token/verify-cookie/', {
+        const response = await fetch('/api/accounts/auth/token/verify-cookie/', {
             method: 'POST',
             headers: {
                 'X-CSRFToken': this.getCSRFToken()

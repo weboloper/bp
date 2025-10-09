@@ -26,7 +26,7 @@ def test_cross_origin_api():
         return
     
     # 2. Simple JWT endpoint'leri test
-    base_url = "http://localhost:8000/api/v1/accounts"
+    base_url = "http://localhost:8000/api/accounts"
     
     print("2. Django Simple JWT Login:")
     login_url = f"{base_url}/auth/login/"
@@ -65,20 +65,20 @@ def test_cross_origin_api():
     print("✅ Cross-origin API hazır!")
     
     print("\n🎯 Aktif Endpoint'ler:")
-    print("  ✅ POST /api/v1/accounts/auth/login/           # Django Simple JWT")
-    print("  ✅ POST /api/v1/accounts/auth/token/refresh/   # Django Simple JWT")  
-    print("  ✅ POST /api/v1/accounts/auth/token/verify/    # Django Simple JWT")
+    print("  ✅ POST /api/accounts/auth/login/           # Django Simple JWT")
+    print("  ✅ POST /api/accounts/auth/token/refresh/   # Django Simple JWT")  
+    print("  ✅ POST /api/accounts/auth/token/verify/    # Django Simple JWT")
     
     print("\n💤 Devre Dışı Endpoint'ler (Comment'li):")
-    print("  💤 POST /api/v1/accounts/auth/login-cookie/")
-    print("  💤 POST /api/v1/accounts/auth/logout-cookie/")
-    print("  💤 POST /api/v1/accounts/auth/token/verify-cookie/")
-    print("  💤 POST /api/v1/accounts/auth/token/refresh-cookie/")
+    print("  💤 POST /api/accounts/auth/login-cookie/")
+    print("  💤 POST /api/accounts/auth/logout-cookie/")
+    print("  💤 POST /api/accounts/auth/token/verify-cookie/")
+    print("  💤 POST /api/accounts/auth/token/refresh-cookie/")
     
     print("\n📋 Frontend Kullanım:")
     print("""
     // Login
-    const response = await fetch('http://your-backend.com/api/v1/accounts/auth/login/', {
+    const response = await fetch('http://your-backend.com/api/accounts/auth/login/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({username, password})

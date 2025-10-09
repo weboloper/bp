@@ -27,4 +27,16 @@ urlpatterns = [
     # profile update urls
     path('profile-update/', views.profile_update_view, name='profile_update'),
     path('username-change/', views.username_change_view, name='username_change'),
+    
+    # Google OAuth urls
+    path('google-login/', views.google_login_view, name='google_login'),
+    path('google-callback/', views.google_callback_view, name='google_callback'),
+    
+    # Apple OAuth urls
+    path('apple-login/', views.apple_login_view, name='apple_login'),
+    path('apple-callback/', views.apple_callback_view, name='apple_callback'),
+    
+    # Facebook OAuth urls
+    path('facebook-login/', views.facebook_login_view, name='facebook_login'),
+    path('facebook-callback/', views.facebook_callback_view, name='facebook_callback'),
 ]

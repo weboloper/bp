@@ -8,6 +8,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth import get_user_model
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from core.email_service import EmailService
 from .serializers import (
     CustomTokenObtainPairSerializer, 
@@ -18,15 +20,20 @@ from .serializers import (
     PasswordChangeSerializer,
     EmailChangeSerializer,
     ProfileUpdateSerializer,
-    UsernameChangeSerializer
+    UsernameChangeSerializer,
+    GoogleSocialLoginSerializer,
+    FacebookSocialLoginSerializer,
+    AppleSocialLoginSerializer
 )
 
 User = get_user_model()
 
 
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST'), name='post')
 class RegisterAPIView(APIView):
     """
     User registration endpoint
+    Rate limited: 5 requests per minute per IP
     """
     permission_classes = [AllowAny]
     
@@ -81,10 +88,170 @@ class RegisterAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(ratelimit(key='ip', rate='10/m', method='POST'), name='post')
+class GoogleSocialLoginAPIView(APIView):
+    """
+    Google Social Login API View
+    Frontend'den Google access token alır, verify eder ve JWT token döner
+    Rate limited: 10 requests per minute per IP
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        """
+        Google social login
+        
+        Request format:
+        {
+            "access_token": "google_oauth_access_token_from_frontend"
+        }
+        
+        Response format:
+        {
+            "access": "jwt_access_token",
+            "refresh": "jwt_refresh_token"
+        }
+        """
+        serializer = GoogleSocialLoginSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            try:
+                # Google token verify et ve user oluştur/bul
+                user = serializer.save()
+                
+                # JWT tokens oluştur - mevcut sistemle aynı
+                from rest_framework_simplejwt.tokens import RefreshToken
+                
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+                
+                return Response({
+                    'access': str(access_token),
+                    'refresh': str(refresh),
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                # Unexpected errors
+                return Response(
+                    {'detail': f'Google login sırasında hata oluştu: {str(e)}'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(ratelimit(key='ip', rate='10/m', method='POST'), name='post')
+class FacebookSocialLoginAPIView(APIView):
+    """
+    Facebook Social Login API View
+    Frontend'den Facebook access token alır, verify eder ve JWT token döner
+    Rate limited: 10 requests per minute per IP
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        """
+        Facebook social login
+        
+        Request format:
+        {
+            "access_token": "facebook_oauth_access_token_from_frontend"
+        }
+        
+        Response format:
+        {
+            "access": "jwt_access_token",
+            "refresh": "jwt_refresh_token"
+        }
+        """
+        serializer = FacebookSocialLoginSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            try:
+                # Facebook token verify et ve user oluştur/bul
+                user = serializer.save()
+                
+                # JWT tokens oluştur
+                from rest_framework_simplejwt.tokens import RefreshToken
+                
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+                
+                return Response({
+                    'access': str(access_token),
+                    'refresh': str(refresh),
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                # Unexpected errors
+                return Response(
+                    {'detail': f'Facebook login sırasında hata oluştu: {str(e)}'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(ratelimit(key='ip', rate='10/m', method='POST'), name='post')
+class AppleSocialLoginAPIView(APIView):
+    """
+    Apple Social Login API View
+    Frontend'den Apple identity token alır, verify eder ve JWT token döner
+    Rate limited: 10 requests per minute per IP
+    """
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        """
+        Apple social login
+        
+        Request format:
+        {
+            "identity_token": "apple_identity_token_from_frontend"
+        }
+        
+        Response format:
+        {
+            "access": "jwt_access_token",
+            "refresh": "jwt_refresh_token"
+        }
+        """
+        serializer = AppleSocialLoginSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            try:
+                # Apple token verify et ve user oluştur/bul
+                user = serializer.save()
+                
+                # JWT tokens oluştur
+                from rest_framework_simplejwt.tokens import RefreshToken
+                
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+                
+                return Response({
+                    'access': str(access_token),
+                    'refresh': str(refresh),
+                }, status=status.HTTP_200_OK)
+                
+            except Exception as e:
+                # Unexpected errors
+                return Response(
+                    {'detail': f'Apple login sırasında hata oluştu: {str(e)}'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(ratelimit(key='user_or_ip', rate='5/h', method='POST'), name='post')
 class UsernameChangeAPIView(APIView):
     """
     Username change endpoint for authenticated users
-    accounts/views.py username_change_view'e benzer mantık
+    Rate limited: 5 requests per hour per user or IP
     """
     permission_classes = [IsAuthenticated]
     
@@ -117,9 +284,11 @@ class UsernameChangeAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(ratelimit(key='ip', rate='3/h', method='POST'), name='post')
 class PasswordResetAPIView(APIView):
     """
     Password reset request endpoint
+    Rate limited: 3 requests per hour per IP (security)
     """
     permission_classes = [AllowAny]
     
@@ -169,9 +338,11 @@ class PasswordResetAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(ratelimit(key='ip', rate='10/h', method='POST'), name='post')
 class PasswordResetConfirmAPIView(APIView):
     """
     Password reset confirm endpoint
+    Rate limited: 10 requests per hour per IP
     """
     permission_classes = [AllowAny]
     
@@ -217,9 +388,11 @@ class PasswordResetConfirmAPIView(APIView):
             )
 
 
+@method_decorator(ratelimit(key='user', rate='10/h', method='POST'), name='post')
 class PasswordChangeAPIView(APIView):
     """
     Password change endpoint for authenticated users
+    Rate limited: 10 requests per hour per user
     """
     permission_classes = [IsAuthenticated]
     
@@ -249,9 +422,11 @@ class PasswordChangeAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@method_decorator(ratelimit(key='user', rate='3/h', method='POST'), name='post')
 class EmailChangeAPIView(APIView):
     """
     Email change request endpoint for authenticated users
+    Rate limited: 3 requests per hour per user
     """
     permission_classes = [IsAuthenticated]
     
@@ -312,6 +487,7 @@ class EmailChangeAPIView(APIView):
 class EmailChangeConfirmAPIView(APIView):
     """
     Email change confirmation endpoint
+    No rate limiting needed - one-time token use
     """
     permission_classes = [AllowAny]
     
@@ -376,9 +552,11 @@ class EmailChangeConfirmAPIView(APIView):
             )
 
 
+@method_decorator(ratelimit(key='ip', rate='5/h', method='POST'), name='post')
 class EmailVerificationResendAPIView(APIView):
     """
     Email verification resend endpoint
+    Rate limited: 5 requests per hour per IP
     """
     permission_classes = [AllowAny]
     
@@ -437,6 +615,7 @@ class EmailVerificationResendAPIView(APIView):
 class EmailVerificationConfirmAPIView(APIView):
     """
     Email verification confirm endpoint
+    No rate limiting needed - one-time token use
     """
     permission_classes = [AllowAny]
     
@@ -492,9 +671,11 @@ class EmailVerificationConfirmAPIView(APIView):
             )
 
 
+@method_decorator(ratelimit(key='ip', rate='15/m', method='POST'), name='post')
 class CustomTokenObtainPairView(TokenObtainPairView):
     """
     Custom login view that accepts both username and email
+    Rate limited: 15 requests per minute per IP
     """
     serializer_class = CustomTokenObtainPairSerializer
     
@@ -511,6 +692,7 @@ class MeAPIView(APIView):
     GET: Get current user profile
     PATCH: Update profile (first_name, last_name, bio, avatar, birth_date)
     Requires JWT authentication
+    No rate limiting needed for GET requests
     """
     permission_classes = [IsAuthenticated]
     
@@ -547,9 +729,11 @@ class MeAPIView(APIView):
         
         return Response(data, status=status.HTTP_200_OK)
     
+    @method_decorator(ratelimit(key='user', rate='20/h', method='PATCH'))
     def patch(self, request):
         """
         Update user profile (first_name, last_name, bio, avatar, birth_date)
+        Rate limited: 20 requests per hour per user
         """
         serializer = ProfileUpdateSerializer(data=request.data, user=request.user)
         
