@@ -34,6 +34,7 @@ django-allauth==65.3.0
 google-auth==2.23.4
 google-auth-oauthlib==1.1.0
 cryptography==42.0.5
+PyJWT[crypto]==2.8.0  # Apple JWT verification için
 
 # File Upload & Storage
 pillow==11.2.1

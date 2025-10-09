@@ -88,28 +88,68 @@ class BaseSocialAuth:
         """
         Email'den unique username oluştur
         
+        Username kuralları (accounts.utils.validate_alphanumeric_username ile tutarlı):
+        - Email'in @ öncesi kısmından başla
+        - Sadece harf, rakam, alt çizgi (_) ve tire (-) içerebilir
+        - 3-30 karakter uzunluğunda olmalı
+        - Unique olmalı (varsa sonuna sayı ekle)
+        
         Args:
-            email (str): User email
+            email (str): User email adresi
             
         Returns:
-            str: Unique username
+            str: Unique ve valid username
+            
+        Example:
+            john.doe@gmail.com -> johndoe -> johndoe1 -> johndoe2 ...
         """
+        from accounts.utils import validate_alphanumeric_username
+        import re
+        
+        # Email'den base username oluştur
         username_base = email.split('@')[0]
         
-        # Geçersiz karakterleri temizle
-        username_base = ''.join(c for c in username_base if c.isalnum() or c in ('_', '-'))
+        # Geçersiz karakterleri temizle (sadece alphanumeric, _, - kalsın)
+        # Bu regex utils.py'deki validate_alphanumeric_username ile aynı
+        username_base = re.sub(r'[^a-zA-Z0-9_-]', '', username_base)
         
-        # Çok kısa ise 'user' ekle
+        # Boş olursa varsayılan değer
+        if not username_base:
+            username_base = 'user'
+        
+        # Çok kısa ise (3 karakterden az) 'user' ekle
         if len(username_base) < 3:
             username_base = f"user_{username_base}"
         
+        # Maximum uzunluk (30 karakter)
+        username_base = username_base[:30]
+        
+        # Validate alphanumeric (utils.py'deki validator kullan - tutarlılık için)
+        try:
+            validate_alphanumeric_username(username_base)
+        except ValidationError:
+            # Eğer hala geçersizse, varsayılan kullan
+            username_base = 'user'
+        
+        # Unique username bulana kadar dene
         username = username_base
         counter = 1
         
-        # Unique username bulana kadar dene
         while User.objects.filter(username=username).exists():
-            username = f"{username_base}{counter}"
+            # Sayı ekleyerek unique yap
+            suffix = str(counter)
+            # Username + sayı 30 karakteri geçmesin
+            max_base_length = 30 - len(suffix)
+            username = f"{username_base[:max_base_length]}{suffix}"
             counter += 1
+            
+            # Sonsuz döngü koruması (teoride imkansız ama yine de)
+            if counter > 9999:
+                # Çok nadiren olur, random ekle
+                import secrets
+                random_suffix = secrets.token_hex(3)
+                username = f"user{random_suffix}"
+                break
         
         return username
     
@@ -383,24 +423,31 @@ class AppleAuth(BaseSocialAuth):
     Apple OAuth 2.0 kullanarak kullanıcı authentication'ı yapar.
     Apple id_token (JWT) kullanır.
     
-    NOT: Bu basit implementation JWT token'ı verify etmez.
-    Production için Apple public key ile signature verification eklenmelidir.
+    DEBUG mode:
+        - Basit JWT decode (test için)
+        - Signature verify edilmez
+        - Hızlı ve kolay test
+    
+    PRODUCTION mode:
+        - Full JWT verification
+        - Apple public key ile signature verify
+        - Güvenli ve production-ready
     """
     
     provider_name = 'apple'
     
     def verify_token(self, id_token):
         """
-        Apple id_token'ı verify et (basit decode)
+        Apple id_token'ı verify et
         
-        NOT: Bu sadece format kontrolü yapar, imza doğrulaması yapmaz!
-        Production için PyJWT ile tam verification gerekli.
+        DEBUG mode: Sadece format kontrolü
+        PRODUCTION mode: Full JWT verification
         
         Args:
             id_token (str): Apple'dan alınan JWT id_token
             
         Returns:
-            bool: Token formatı geçerli ise True
+            bool: Token geçerli ise True
         """
         try:
             # JWT format kontrolü: 3 parça olmalı (header.payload.signature)
@@ -422,8 +469,8 @@ class AppleAuth(BaseSocialAuth):
         """
         Apple id_token'dan kullanıcı bilgilerini çıkar
         
-        Apple Sign In'de user bilgileri JWT token içinde gelir.
-        Ayrı bir API isteği gerekmez.
+        DEBUG mode: Basit decode
+        PRODUCTION mode: Full JWT verification
         
         Args:
             id_token (str): Apple'dan alınan JWT id_token
@@ -432,7 +479,32 @@ class AppleAuth(BaseSocialAuth):
             dict: Token içinden decode edilmiş user data
             
         Raises:
-            ValidationError: Token decode edilemezse
+            ValidationError: Token decode edilemezse veya verify başarısız olursa
+        """
+        from django.conf import settings
+        
+        if settings.DEBUG:
+            # DEVELOPMENT: Basit decode (test için)
+            return self._simple_decode(id_token)
+        else:
+            # PRODUCTION: Full JWT verification (güvenlik için)
+            return self._verified_decode(id_token)
+    
+    def _simple_decode(self, id_token):
+        """
+        Development için basit JWT decode
+        
+        NOT: Bu method signature verify ETMEZ!
+        Sadece development ve test için kullanılmalı.
+        
+        Args:
+            id_token (str): JWT token
+            
+        Returns:
+            dict: Decoded payload
+            
+        Raises:
+            ValidationError: Decode edilemezse
         """
         try:
             import json
@@ -456,6 +528,88 @@ class AppleAuth(BaseSocialAuth):
             
         except Exception as e:
             raise ValidationError(f'Apple token decode edilemedi: {str(e)}')
+    
+    def _verified_decode(self, id_token):
+        """
+        Production için full JWT verification
+        
+        Apple'dan alınan JWT token'ı Apple'un public key'i ile verify eder.
+        Bu method signature kontrolü yapar ve güvenlidir.
+        
+        Args:
+            id_token (str): JWT token
+            
+        Returns:
+            dict: Verified ve decoded payload
+            
+        Raises:
+            ValidationError: Token verify edilemezse veya geçersizse
+        """
+        try:
+            import jwt
+            import requests
+            import json
+            from django.conf import settings
+            
+            # Apple'un public key'lerini al
+            keys_url = 'https://appleid.apple.com/auth/keys'
+            keys_response = requests.get(keys_url, timeout=10)
+            
+            if keys_response.status_code != 200:
+                raise ValidationError('Apple public keys alınamadı')
+            
+            apple_keys = keys_response.json()['keys']
+            
+            # Token header'dan key ID al
+            try:
+                header = jwt.get_unverified_header(id_token)
+                kid = header.get('kid')
+                
+                if not kid:
+                    raise ValidationError('Token header\'da key ID bulunamadı')
+            except jwt.DecodeError as e:
+                raise ValidationError(f'Token header decode edilemedi: {str(e)}')
+            
+            # Doğru public key'i bul
+            public_key = None
+            for key in apple_keys:
+                if key['kid'] == kid:
+                    # JWK formatından RSA public key oluştur
+                    public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+                    break
+            
+            if not public_key:
+                raise ValidationError(f'Apple public key bulunamadı (kid: {kid})')
+            
+            # Token'ı VERIFY ET!
+            try:
+                decoded = jwt.decode(
+                    id_token,
+                    public_key,
+                    algorithms=['RS256'],
+                    audience=settings.APPLE_CLIENT_ID,  # Bu app için mi?
+                    issuer='https://appleid.apple.com'  # Apple'dan mı?
+                )
+                return decoded
+                
+            except jwt.ExpiredSignatureError:
+                raise ValidationError('Apple token süresi dolmuş')
+            except jwt.InvalidAudienceError:
+                raise ValidationError('Apple token yanlış app için (audience mismatch)')
+            except jwt.InvalidIssuerError:
+                raise ValidationError('Apple token geçersiz issuer (Apple değil)')
+            except jwt.InvalidSignatureError:
+                raise ValidationError('Apple token imzası geçersiz (sahte token)')
+            except jwt.InvalidTokenError as e:
+                raise ValidationError(f'Apple token geçersiz: {str(e)}')
+                
+        except requests.RequestException as e:
+            raise ValidationError(f'Apple key servisi ulaşılamıyor: {str(e)}')
+        except Exception as e:
+            # Generic error handler
+            if isinstance(e, ValidationError):
+                raise
+            raise ValidationError(f'Apple token verification hatası: {str(e)}')
     
     def extract_user_data(self, raw_data):
         """

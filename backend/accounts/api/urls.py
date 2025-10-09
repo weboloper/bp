@@ -16,7 +16,7 @@ from .views import (
     EmailChangeConfirmAPIView,
     UsernameChangeAPIView,
     GoogleSocialLoginAPIView,
-    # FacebookSocialLoginAPIView,
+    FacebookSocialLoginAPIView,  # ✅ Eklendi
     AppleSocialLoginAPIView
 )
 # Cookie-based views (Farklı host için devre dışı)
@@ -56,7 +56,7 @@ urlpatterns = [
     
     # Social login endpoints
     path('auth/social/google/', GoogleSocialLoginAPIView.as_view(), name='google_social_login'),
-    # path('auth/social/facebook/', FacebookSocialLoginAPIView.as_view(), name='facebook_social_login'),
+    path('auth/social/facebook/', FacebookSocialLoginAPIView.as_view(), name='facebook_social_login'),  # ✅ Eklendi
     path('auth/social/apple/', AppleSocialLoginAPIView.as_view(), name='apple_social_login'),
     
     # User profile endpoints - RESTful design
