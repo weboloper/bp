@@ -39,6 +39,7 @@ urlpatterns = [
     path("api/", include([
         path('', api_root, name='api_root'),
         path('accounts/', include('accounts.api.urls')),
+        path('pages/', include('pages.api.urls')),
     ])),
     
     # Pages app - FALLBACK (en sonda olmalı)
