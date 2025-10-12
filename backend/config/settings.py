@@ -321,12 +321,21 @@ SIMPLE_JWT = {
 }
 
 # CORS Settings
-CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in development
-if not DEBUG:
+# withCredentials: true kullanıldığında CORS_ALLOW_ALL_ORIGINS çalışmaz
+# Explicit origins kullanmalıyız
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
+else:
     CORS_ALLOWED_ORIGINS = [
         f"https://{env('DOMAIN', default='yourdomain.com')}",
         f"https://www.{env('DOMAIN', default='yourdomain.com')}",
     ]
+
+# Cookie-based auth için gerekli
+CORS_ALLOW_CREDENTIALS = True
 
 # Redis Health Check Function
 def check_redis_connection():

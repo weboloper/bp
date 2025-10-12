@@ -18,6 +18,17 @@ User = get_user_model()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+
+    # Burada DRF'nin default UniqueValidator'ını iptal ediyoruz
+    username = serializers.CharField(
+        required=True,
+        validators=[],
+    )
+    email = serializers.EmailField(
+        required=True,
+        validators=[],
+    )
+    
     """User registration serializer"""
     password1 = serializers.CharField(write_only=True, min_length=1)
     password2 = serializers.CharField(write_only=True, min_length=1)
