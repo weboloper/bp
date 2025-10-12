@@ -132,43 +132,43 @@ class PasswordResetForm(forms.Form):
 
 
 class PasswordResetConfirmForm(forms.Form):
-    password1 = forms.CharField(required=True, widget=forms.PasswordInput)
-    password2 = forms.CharField(required=True, widget=forms.PasswordInput)
+    new_password1 = forms.CharField(required=True, widget=forms.PasswordInput)
+    new_password2 = forms.CharField(required=True, widget=forms.PasswordInput)
     
     def __init__(self, user, *args, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
     
-    def clean_password1(self):
-        password1 = self.cleaned_data.get('password1', '')
+    def clean_new_password1(self):
+        new_password1 = self.cleaned_data.get('new_password1', '')
         
-        if not password1:
+        if not new_password1:
             raise ValidationError('Yeni şifre gerekli')
         
         # Django's built-in password validation
         try:
-            validate_password(password1, self.user)
+            validate_password(new_password1, self.user)
         except ValidationError as e:
             raise ValidationError(' '.join(e.messages))
         
-        return password1
+        return new_password1
     
-    def clean_password2(self):
-        password2 = self.cleaned_data.get('password2', '')
+    def clean_new_password2(self):
+        new_password2 = self.cleaned_data.get('new_password2', '')
         
-        if not password2:
+        if not new_password2:
             raise ValidationError('Şifre tekrarı gerekli')
         
-        return password2
+        return new_password2
     
     def clean(self):
         cleaned_data = super().clean()
-        password1 = cleaned_data.get('password1')
-        password2 = cleaned_data.get('password2')
+        new_password1 = cleaned_data.get('new_password1')
+        new_password2 = cleaned_data.get('new_password2')
         
-        if password1 and password2:
-            if password1 != password2:
-                raise ValidationError({'password2': 'Şifreler eşleşmiyor'})
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise ValidationError({'new_password2': 'Şifreler eşleşmiyor'})
         
         return cleaned_data
     

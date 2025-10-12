@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    .auth-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+    }
+
+    .auth-sidebar {
+        background-color: #e7effb;
+    }
+
+
+</style>
+
+<div class="container-fluid py-4">
+    <div class="row justify-content-center auth-container">
+        <div class="col-12 col-lg-10 col-xl-8">
+            <div class="card border-0 rounded-3 overflow-hidden shadow">
+                <div class="row g-0">
+                    <!-- Sidebar -->
+                    <div class="col-md-6 auth-sidebar d-md-flex flex-column justify-content-center align-items-center text-center p-5">
+                        <img src="{% static 'img/logo.svg' %}" alt="Logo" class="mb-md-4" style="max-width: 120px;">
+                        <div class="d-none d-md-block">
+                            <h3 class="mb-3">{% block sidebar_title %}BP{% endblock %}</h3>
+                            <p class="mb-0 small">{% block sidebar_description %}Modern ve güvenli bir şekilde hesabınızı yönetin{% endblock %}</p>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="col-md-6 p-4 p-md-5">
+                        <!-- Messages Display -->
+                        {% if messages %}
+                            <div class="mb-3">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                        {{ message|safe }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% block auth_content %}
+                        <!-- Auth pages will override this -->
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -35,10 +35,12 @@ urlpatterns = [
     
     # App URLs
     path('accounts/', include('accounts.urls')),
+    path('posts/', include('posts.urls')),
     # API endpoints
     path("api/", include([
         path('', api_root, name='api_root'),
         path('accounts/', include('accounts.api.urls')),
+        path('posts/', include('posts.api.urls')),
         path('pages/', include('pages.api.urls')),
     ])),
     

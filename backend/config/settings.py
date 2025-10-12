@@ -116,6 +116,7 @@ INSTALLED_APPS = [
     'core',
     'accounts',
     'pages',
+    'posts',
     
 ]
 

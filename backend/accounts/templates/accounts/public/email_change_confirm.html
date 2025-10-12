@@ -1,30 +1,34 @@
-{% extends 'accounts/base_public.html' %}
+{% extends 'accounts/auth_base.html' %}
 
-{% block main_content %}
-<div class="auth-card">
-    <h2>Email Değişiklik Onayı</h2>
+{% block sidebar_icon %}{% if validlink %}✅{% else %}❌{% endif %}{% endblock %}
+{% block sidebar_title %}Email Değişikliği{% endblock %}
+{% block sidebar_description %}{% if validlink %}Email adresiniz güncellendi{% else %}Doğrulama başarısız oldu{% endif %}{% endblock %}
+
+{% block auth_content %}
+<h4 class="mb-3">Email Değişiklik Onayı</h4>
+
+{% if validlink %}
+    <div class="alert alert-success py-2">
+        <h6 class="alert-heading mb-1">✅ Email Başarıyla Değiştirildi!</h6>
+        <p class="mb-1 small">Email adresiniz <strong>{{ old_email }}</strong> adresinden <strong>{{ new_email }}</strong> adresine başarıyla değiştirildi.</p>
+        <p class="mb-0 small">Artık yeni email adresinizle giriş yapabilirsiniz.</p>
+    </div>
     
-    {% if validlink %}
-        <div class="success-message">
-            <h3>✅ Email Başarıyla Değiştirildi!</h3>
-            <p>Email adresiniz <strong>{{ old_email }}</strong> adresinden <strong>{{ new_email }}</strong> adresine başarıyla değiştirildi.</p>
-            <p>Artık yeni email adresinizle giriş yapabilirsiniz.</p>
-            
-            <div class="auth-links">
-                <a href="{% url 'accounts:login' %}" class="btn btn-success">Giriş Yap</a>
-                <a href="{% url 'accounts:profile' %}" class="btn btn-primary">Profile Git</a>
-            </div>
-        </div>
-    {% else %}
-        <div class="error-message">
-            <h3>❌ Geçersiz Link</h3>
-            <p>Email değişiklik linki geçersiz, süresi dolmuş veya zaten kullanılmış.</p>
-            
-            <div class="auth-links">
-                <a href="{% url 'accounts:email_change' %}" class="btn btn-primary">Yeni Talep Oluştur</a>
-                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">Profile Git</a>
-            </div>
-        </div>
-    {% endif %}
+    <div class="d-grid mb-3">
+        <a href="{% url 'accounts:login' %}" class="btn btn-primary">Giriş Yap</a>
+    </div>
+{% else %}
+    <div class="alert alert-danger py-2">
+        <h6 class="alert-heading mb-1">❌ Geçersiz Link</h6>
+        <p class="mb-0 small">Email değişiklik linki geçersiz, süresi dolmuş veya zaten kullanılmış.</p>
+    </div>
+    
+    <div class="d-grid mb-3">
+        <a href="{% url 'accounts:email_change' %}" class="btn btn-primary">Yeni Talep Oluştur</a>
+    </div>
+{% endif %}
+
+<div class="text-center small">
+    <a href="{% url 'accounts:profile' %}">Profile git</a>
 </div>
 {% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Yazılar{% endblock %}
+
+{% block content %}
+
+    <h1>Yazılar</h1>
+        
+    {% if posts %}
+        {% for post in posts %}
+            <h2><a href="{% url 'posts:detail' pk=post.id %}">{{ post.title }}</a></h2>
+                        
+            <div>{{ post.content|truncatewords:30|linebreaks }}</div>
+            <span>Oluşturulma: {{ post.created_at|date:"d M Y" }}</span>
+
+
+         {% endfor %}
+    {% else %}
+        <p>Henüz hiç sayfa eklenmemiş.</p>
+    {% endif %}
+
+{% endblock %}
