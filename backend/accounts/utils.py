@@ -21,26 +21,69 @@ def validate_image_extension(value):
         raise ValidationError(_('Only JPEG, JPG and PNG images are allowed.'))
 
 def resize_avatar(image, size=(300, 300)):
-    """Resize avatar image to specified size"""
-    if image:
+    """
+    Avatar için akıllı resize - Her zaman merkezi kare crop
+    
+    Nasıl çalışır:
+    1. Resmi aç ve RGB'ye çevir
+    2. Merkezi kare crop (uzun kenardan kırp)
+    3. Hedef boyuta resize (300x300)
+    4. JPEG olarak kaydet
+    
+    Sonuç: Her zaman mükemmel kare avatar
+    """
+    if not image:
+        return image
+    
+    try:
+        # Resmi aç
         img = Image.open(image)
         
-        # Convert to RGB if necessary
+        # RGB'ye çevir
         if img.mode not in ('RGB', 'RGBA'):
             img = img.convert('RGB')
         
-        # Resize image
+        # Mevcut boyutlar
+        width, height = img.size
+        
+        # Kare crop için merkezi hesapla
+        if width > height:
+            # Yatay resim - ortadan kare kes
+            left = (width - height) // 2
+            top = 0
+            right = left + height
+            bottom = height
+        else:
+            # Dikey resim - ortadan kare kes
+            left = 0
+            top = (height - width) // 2
+            right = width
+            bottom = top + width
+        
+        # Merkezi kare crop
+        img = img.crop((left, top, right, bottom))
+        
+        # Hedefe resize (artık kare olduğu için bozulma olmaz)
         img = img.resize(size, Image.Resampling.LANCZOS)
         
-        # Save to BytesIO
+        # BytesIO'ya kaydet
         output = BytesIO()
-        img.save(output, format='JPEG', quality=90)
+        img.save(output, format='JPEG', quality=90, optimize=True)
         output.seek(0)
         
-        # Create new InMemoryUploadedFile
+        # Yeni dosya adı
+        original_name = os.path.splitext(image.name)[0]
+        
         return InMemoryUploadedFile(
-            output, 'ImageField', 
-            f"{image.name.split('.')[0]}.jpg",
-            'image/jpeg', sys.getsizeof(output), None
+            output,
+            'ImageField',
+            f"{original_name}.jpg",
+            'image/jpeg',
+            output.getbuffer().nbytes,
+            None
         )
-    return image
+    except Exception as e:
+        print(f"Error resizing avatar: {e}")
+        import traceback
+        traceback.print_exc()
+        return image
