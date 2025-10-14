@@ -1,58 +1,63 @@
-{% extends 'accounts/base_authenticated.html' %}
+{% extends 'accounts/settings_base.html' %}
 
-{% block main_content %}
-<div class="form-container">
-    <div class="form-card">
-        <h2>Kullanıcı Adı Değiştir</h2>
-        
-        <div class="info-alert">
-            <strong>📝 Mevcut Kullanıcı Adı:</strong> {{ user.username }}
-        </div>
+{% block settings_content %}
+<h4 class="mb-1">Kullanıcı Adı Değiştir</h4>
+<p class="text-muted small mb-3">Giriş yaparken yeni kullanıcı adınızı kullanacaksınız</p>
 
-        <div class="warning-alert">
-            <strong>⚠️ Önemli:</strong>
-            <ul>
-                <li>Güvenlik için mevcut şifreniz gerekli</li>
-                <li>Kullanıcı adı değiştikten sonra giriş yaparken yeni adı kullanın</li>
-                <li>Bu işlem geri alınamaz</li>
-            </ul>
-        </div>
-        
-        <form method="post">
-            {% csrf_token %}
-            
-            <div class="form-group">
-                <label for="current_password">Mevcut Şifre</label>
-                <input type="password" id="current_password" name="current_password" required>
-                {% if errors.current_password %}
-                    <div class="error">
-                        {% for error in errors.current_password %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                <small>Güvenlik için mevcut şifrenizi girin</small>
-            </div>
-
-            <div class="form-group">
-                <label for="new_username">Yeni Kullanıcı Adı</label>
-                <input type="text" id="new_username" name="new_username" 
-                       value="{{ new_username }}" maxlength="30" required>
-                {% if errors.new_username %}
-                    <div class="error">
-                        {% for error in errors.new_username %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                <small>3-30 karakter, sadece harf, rakam, alt çizgi (_) ve tire (-)</small>
-            </div>
-
-            <div class="form-actions">
-                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">← Geri</a>
-                <button type="submit" class="btn btn-warning">Kullanıcı Adı Değiştir</button>
-            </div>
-        </form>
-    </div>
+<div class="alert alert-info py-2 mb-3">
+    <small><strong>📝 Mevcut Kullanıcı Adı:</strong> {{ user.username }}</small>
 </div>
+
+<div class="alert alert-warning py-2 mb-4">
+    <small>
+        <strong>⚠️ Önemli:</strong>
+        <ul class="mb-0 mt-1 ps-3 small">
+            <li>Güvenlik için mevcut şifreniz gerekli</li>
+            <li>Kullanıcı adı değiştikten sonra giriş yaparken yeni adı kullanın</li>
+            <li>Bu işlem geri alınamaz</li>
+        </ul>
+    </small>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <label for="current_password" class="form-label small">Mevcut Şifre</label>
+        <input type="password" 
+               class="form-control {% if errors.current_password %}is-invalid{% endif %}" 
+               id="current_password" 
+               name="current_password" 
+               required 
+               autofocus>
+        {% if errors.current_password %}
+            <div class="invalid-feedback">
+                {% for error in errors.current_password %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+        <div class="form-text">Güvenlik için mevcut şifrenizi girin</div>
+    </div>
+
+    <div class="mb-4">
+        <label for="new_username" class="form-label small">Yeni Kullanıcı Adı</label>
+        <input type="text" 
+               class="form-control {% if errors.new_username %}is-invalid{% endif %}" 
+               id="new_username" 
+               name="new_username" 
+               value="{{ new_username }}" 
+               maxlength="30" 
+               required>
+        {% if errors.new_username %}
+            <div class="invalid-feedback">
+                {% for error in errors.new_username %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+        <div class="form-text">3-30 karakter, sadece harf, rakam, _ ve -</div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">İptal</a>
+        <button type="submit" class="btn btn-warning">Kullanıcı Adı Değiştir</button>
+    </div>
+</form>
 {% endblock %}

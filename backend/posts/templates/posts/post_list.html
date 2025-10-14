@@ -1,22 +1,69 @@
-{% extends 'base.html' %}
+{% extends 'core/base_content.html' %}
 
-{% block title %}Yazılar{% endblock %}
+{% block main_content %}
+<div class="p-4">
+    <h1 class="mb-4">Blog Yazıları</h1>
 
-{% block content %}
-
-    <h1>Yazılar</h1>
-        
     {% if posts %}
-        {% for post in posts %}
-            <h2><a href="{% url 'posts:detail' pk=post.id %}">{{ post.title }}</a></h2>
-                        
-            <div>{{ post.content|truncatewords:30|linebreaks }}</div>
-            <span>Oluşturulma: {{ post.created_at|date:"d M Y" }}</span>
-
-
-         {% endfor %}
+        <div class="row g-4">
+            {% for post in posts %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="card-title">
+                            <a href="{% url 'posts:post_detail' post.pk %}" class="text-decoration-none text-dark">
+                                {{ post.title }}
+                            </a>
+                        </h3>
+                        <p class="text-muted small mb-2">
+                            <span>👤 {{ post.author.username }}</span>
+                            <span class="mx-2">•</span>
+                            <span>📅 {{ post.created_at|date:"d M Y" }}</span>
+                            {% if not post.is_published %}
+                                <span class="badge bg-warning text-dark ms-2">Taslak</span>
+                            {% endif %}
+                        </p>
+                        <p class="card-text">{{ post.content|truncatewords:50 }}</p>
+                        <a href="{% url 'posts:post_detail' post.pk %}" class="btn btn-sm btn-primary">Devamını Oku →</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     {% else %}
-        <p>Henüz hiç sayfa eklenmemiş.</p>
+        <div class="alert alert-info">
+            <h4 class="alert-heading">📝 Henüz yazı yok</h4>
+            <p class="mb-0">Blog'a henüz hiç yazı eklenmemiş.</p>
+        </div>
     {% endif %}
+</div>
+{% endblock %}
 
+{% block right_sidebar %}
+<!-- Blog'a özel sidebar -->
+<div class="widget">
+    <h5>Blog Hakkında</h5>
+    <p class="small text-muted mb-0">
+        Teknoloji, yazılım ve Django hakkında yazılar.
+    </p>
+</div>
+
+<div class="widget">
+    <h5>Kategoriler</h5>
+    <ul class="widget-list">
+        <li><a href="#">Django (5)</a></li>
+        <li><a href="#">Python (3)</a></li>
+        <li><a href="#">Web Geliştirme (7)</a></li>
+        <li><a href="#">Tutorial (4)</a></li>
+    </ul>
+</div>
+
+<div class="widget">
+    <h5>Arşiv</h5>
+    <ul class="widget-list">
+        <li><a href="#">Ekim 2025</a></li>
+        <li><a href="#">Eylül 2025</a></li>
+        <li><a href="#">Ağustos 2025</a></li>
+    </ul>
+</div>
 {% endblock %}

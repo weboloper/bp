@@ -1,0 +1,25 @@
+<div class="tree-item mb-3" style="margin-left: {{ item.level }}rem;">
+    <div class="d-flex align-items-start">
+        <div class="me-2" style="color: #6c757d;">
+            {% if item.level > 0 %}
+                {% for i in "x"|rjust:item.level %}└─{% endfor %}
+            {% endif %}
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-1">
+                <a href="{% url 'pages:page_detail' item.page.slug %}" class="text-decoration-none">
+                    {{ item.page.title }}
+                </a>
+            </h6>
+            <p class="small text-muted mb-0">{{ item.page.content|truncatewords:15 }}</p>
+        </div>
+    </div>
+    
+    {% if item.children %}
+        <div class="mt-2">
+            {% for child in item.children %}
+                {% include 'pages/includes/tree_item.html' with item=child %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

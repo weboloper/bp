@@ -1,0 +1,42 @@
+{% extends 'core/base_content.html' %}
+
+{% block main_content %}
+<div class="p-4">
+    <h1 class="mb-4">🌳 Sayfa Ağacı</h1>
+    <p class="text-muted mb-4">Tüm sayfaların hiyerarşik görünümü</p>
+
+    {% if tree_data %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                {% for item in tree_data %}
+                    {% include 'pages/includes/tree_item.html' with item=item %}
+                {% endfor %}
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h4 class="alert-heading">📄 Henüz sayfa yok</h4>
+            <p class="mb-0">Sistemde henüz hiç sayfa eklenmemiş.</p>
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{% url 'pages:page_list' %}" class="btn btn-outline-primary">← Sayfa Listesi</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block right_sidebar %}
+<div class="widget">
+    <h5>Görünüm Seçenekleri</h5>
+    <ul class="widget-list">
+        <li><a href="{% url 'pages:page_list' %}">Liste Görünümü</a></li>
+        <li><strong>Ağaç Görünümü</strong></li>
+    </ul>
+</div>
+
+<div class="widget">
+    <h5>İstatistikler</h5>
+    <p class="mb-1 small"><strong>Toplam Sayfa:</strong> {{ tree_data|length }}</p>
+</div>
+{% endblock %}

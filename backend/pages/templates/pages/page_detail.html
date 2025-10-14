@@ -1,63 +1,113 @@
-{% extends 'base.html' %}
+{% extends 'core/base_content.html' %}
 
-{% block title %}{{ page.title }}{% endblock %}
-
-{% block content %}
-
-    <h1>{{ page.title }}</h1>
-    <span>Oluşturulma: {{ page.created_at|date:"d F Y" }}</span>
-    {% if page.updated_at != page.created_at %}
-        <span>•</span>
-        <span>Güncelleme: {{ page.updated_at|date:"d F Y" }}</span>
+{% block main_content %}
+<div class="p-4">
+    <!-- Breadcrumb -->
+    {% if breadcrumbs %}
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'pages:page_list' %}">Sayfalar</a></li>
+            {% for crumb in breadcrumbs %}
+                {% if forloop.last %}
+                    <li class="breadcrumb-item active" aria-current="page">{{ crumb.title }}</li>
+                {% else %}
+                    <li class="breadcrumb-item"><a href="{% url 'pages:page_detail' crumb.slug %}">{{ crumb.title }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ol>
+    </nav>
     {% endif %}
 
-
-    <div>
-        {{ page.content|linebreaks }}
-    </div>
-
-     {% if breadcrumbs %}
-    <h2>Breadcrumbs</h2>
-        {% for breadcrumb in breadcrumbs %}
-            <li>
-                <div>
-                    {% if forloop.last %}
-                        <span>{{ breadcrumb.title }}</span>
-                    {% else %}
-                        <a href="{% url 'pages:detail' slug=breadcrumb.slug %}">
-                            {{ breadcrumb.title }}
-                        </a>
-                    {% endif %}
-                </div>
-            </li>
-        {% endfor %}
-    {% endif %}
-    
-
-    {% if children %}
-        <h2>Alt Sayfalar</h2>
-        {% for child in children %}
-            
-                    <a href="{% url 'pages:detail' slug=child.slug %}">
-                        {{ child.title }}
-                    </a>
-                <p>
-                    {{ child.content|truncatewords:15 }}
-                </p>
+    <!-- Page Content -->
+    <article>
+        <header class="mb-4">
+            <h1 class="mb-3">{{ page.title }}</h1>
+            <div class="text-muted small">
+                <span>📅 Oluşturulma: {{ page.created_at|date:"d F Y" }}</span>
+                {% if page.updated_at != page.created_at %}
+                    <span class="mx-2">•</span>
+                    <span>🔄 Güncelleme: {{ page.updated_at|date:"d F Y" }}</span>
+                {% endif %}
             </div>
-        {% endfor %}
+        </header>
+
+        <div class="page-content">
+            {{ page.content|linebreaks }}
+        </div>
+    </article>
+
+    <!-- Child Pages -->
+    {% if children %}
+    <div class="mt-5 pt-4 border-top">
+        <h3 class="mb-3">Alt Sayfalar</h3>
+        <div class="row g-3">
+            {% for child in children %}
+            <div class="col-md-6">
+                <div class="card border-0 bg-light">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <a href="{% url 'pages:page_detail' child.slug %}" class="text-decoration-none">
+                                {{ child.title }}
+                            </a>
+                        </h5>
+                        <p class="card-text small text-muted">
+                            {{ child.content|truncatewords:20 }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
     {% endif %}
 
     <!-- Navigation -->
-    {% if page.parent %}
-        <a href="{% url 'pages:detail' slug=page.parent.slug %}">
-            {{ page.parent.title }}
+    <div class="mt-5 pt-4 border-top">
+        <a href="{% url 'pages:page_list' %}" class="btn btn-outline-primary">← Tüm Sayfalar</a>
+    </div>
+</div>
+{% endblock %}
+
+{% block right_sidebar %}
+<!-- Parent Page -->
+{% if page.parent %}
+<div class="widget">
+    <h5>Üst Sayfa</h5>
+    <p class="mb-0">
+        <a href="{% url 'pages:page_detail' page.parent.slug %}" class="text-decoration-none">
+            ↑ {{ page.parent.title }}
         </a>
-            
-        <a href="{% url 'pages:list' %}">Tüm Sayfalar</a>
-    {% else %}
-        <a href="{% url 'pages:list' %}">Tüm Sayfalar</a>
-    {% endif %}
+    </p>
+</div>
+{% endif %}
 
+<!-- Sibling Pages -->
+{% if page.parent %}
+    {% with page.parent.get_children as siblings %}
+        {% if siblings.count > 1 %}
+        <div class="widget">
+            <h5>İlgili Sayfalar</h5>
+            <ul class="widget-list">
+                {% for sibling in siblings %}
+                    {% if sibling.slug != page.slug %}
+                        <li><a href="{% url 'pages:page_detail' sibling.slug %}">{{ sibling.title }}</a></li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    {% endwith %}
+{% endif %}
 
+<!-- Table of Contents (if has children) -->
+{% if children %}
+<div class="widget">
+    <h5>Bu Sayfanın İçeriği</h5>
+    <ul class="widget-list">
+        {% for child in children %}
+            <li><a href="{% url 'pages:page_detail' child.slug %}">{{ child.title }}</a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% endblock %}

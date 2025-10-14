@@ -1,99 +1,103 @@
-{% extends 'accounts/base_authenticated.html' %}
+{% extends 'accounts/settings_base.html' %}
 
-{% block main_content %}
-<div class="page-header">
-    <h2>Profil Güncelle</h2>
-</div>
+{% block settings_content %}
+<h4 class="mb-1">Profil Güncelle</h4>
+<p class="text-muted small mb-4">Kişisel bilgilerinizi ve profil detaylarınızı düzenleyin</p>
 
-<div class="form-container">
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-        <div class="form-sections">
-            <div class="form-section">
-                <h3>Kişisel Bilgiler</h3>
-                
-                <div class="form-group">
-                    <label for="first_name">Ad</label>
-                    <input type="text" id="first_name" name="first_name" 
-                           value="{{ user_form.first_name.value|default:'' }}" maxlength="30">
-                    {% if user_form.first_name.errors %}
-                        <div class="error">
-                            {% for error in user_form.first_name.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    
+    <h5 class="mb-3 small fw-bold text-uppercase text-muted">Kişisel Bilgiler</h5>
+    
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="first_name" class="form-label small">Ad</label>
+            <input type="text" 
+                   class="form-control {% if user_form.first_name.errors %}is-invalid{% endif %}" 
+                   id="first_name" 
+                   name="first_name" 
+                   value="{{ user_form.first_name.value|default:'' }}" 
+                   maxlength="30">
+            {% if user_form.first_name.errors %}
+                <div class="invalid-feedback">
+                    {% for error in user_form.first_name.errors %}{{ error }}{% endfor %}
                 </div>
-
-                <div class="form-group">
-                    <label for="last_name">Soyad</label>
-                    <input type="text" id="last_name" name="last_name" 
-                           value="{{ user_form.last_name.value|default:'' }}" maxlength="30">
-                    {% if user_form.last_name.errors %}
-                        <div class="error">
-                            {% for error in user_form.last_name.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    <label for="birth_date">Doğum Tarihi</label>
-                    <input type="date" id="birth_date" name="birth_date" 
-                           value="{{ profile_form.birth_date.value|default:'' }}">
-                    {% if profile_form.birth_date.errors %}
-                        <div class="error">
-                            {% for error in profile_form.birth_date.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-section">
-                <h3>Profil Detayları</h3>
-
-                <div class="form-group">
-                    <label for="avatar">Profil Resmi</label>
-                    {% if user.profile.avatar %}
-                        <div class="current-avatar">
-                            <img src="{{ user.profile.avatar.url }}" alt="Mevcut Avatar">
-                        </div>
-                    {% endif %}
-                    <input type="file" id="avatar" name="avatar" accept="image/*">
-                    {% if profile_form.avatar.errors %}
-                        <div class="error">
-                            {% for error in profile_form.avatar.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    <small>JPG, PNG formatları desteklenir. Max boyut: 5MB</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="bio">Hakkımda</label>
-                    <textarea id="bio" name="bio" rows="4" maxlength="500" 
-                              placeholder="Kendiniz hakkında kısa bilgi...">{{ profile_form.bio.value|default:'' }}</textarea>
-                    {% if profile_form.bio.errors %}
-                        <div class="error">
-                            {% for error in profile_form.bio.errors %}
-                                {{ error }}
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    <small>Maksimum 500 karakter</small>
-                </div>
-            </div>
+            {% endif %}
         </div>
 
-        <div class="form-actions">
-            <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">← Geri</a>
-            <button type="submit" class="btn btn-primary">Profili Güncelle</button>
+        <div class="col-md-6 mb-3">
+            <label for="last_name" class="form-label small">Soyad</label>
+            <input type="text" 
+                   class="form-control {% if user_form.last_name.errors %}is-invalid{% endif %}" 
+                   id="last_name" 
+                   name="last_name" 
+                   value="{{ user_form.last_name.value|default:'' }}" 
+                   maxlength="30">
+            {% if user_form.last_name.errors %}
+                <div class="invalid-feedback">
+                    {% for error in user_form.last_name.errors %}{{ error }}{% endfor %}
+                </div>
+            {% endif %}
         </div>
-    </form>
-</div>
+    </div>
+
+    <div class="mb-4">
+        <label for="birth_date" class="form-label small">Doğum Tarihi</label>
+        <input type="date" 
+               class="form-control {% if profile_form.birth_date.errors %}is-invalid{% endif %}" 
+               id="birth_date" 
+               name="birth_date" 
+               value="{{ profile_form.birth_date.value|default:'' }}">
+        {% if profile_form.birth_date.errors %}
+            <div class="invalid-feedback">
+                {% for error in profile_form.birth_date.errors %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <hr class="my-4">
+    
+    <h5 class="mb-3 small fw-bold text-uppercase text-muted">Profil Detayları</h5>
+
+    <div class="mb-3">
+        <label for="avatar" class="form-label small">Profil Resmi</label>
+        {% if user.profile.avatar %}
+            <div class="mb-2">
+                <img src="{{ user.profile.avatar.url }}" alt="Mevcut Avatar" class="rounded" style="width: 80px; height: 80px; object-fit: cover;">
+            </div>
+        {% endif %}
+        <input type="file" 
+               class="form-control {% if profile_form.avatar.errors %}is-invalid{% endif %}" 
+               id="avatar" 
+               name="avatar" 
+               accept="image/*">
+        {% if profile_form.avatar.errors %}
+            <div class="invalid-feedback">
+                {% for error in profile_form.avatar.errors %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+        <div class="form-text">JPG, PNG formatları desteklenir. Max boyut: 5MB</div>
+    </div>
+
+    <div class="mb-4">
+        <label for="bio" class="form-label small">Hakkımda</label>
+        <textarea class="form-control {% if profile_form.bio.errors %}is-invalid{% endif %}" 
+                  id="bio" 
+                  name="bio" 
+                  rows="4" 
+                  maxlength="500" 
+                  placeholder="Kendiniz hakkında kısa bilgi...">{{ profile_form.bio.value|default:'' }}</textarea>
+        {% if profile_form.bio.errors %}
+            <div class="invalid-feedback">
+                {% for error in profile_form.bio.errors %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+        <div class="form-text">Maksimum 500 karakter</div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">İptal</a>
+        <button type="submit" class="btn btn-primary">Profili Güncelle</button>
+    </div>
+</form>
 {% endblock %}

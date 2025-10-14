@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    body {
+        background-color: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    .settings-sidebar {
+        background-color: #667eea;
+        color: white;
+    }
+
+    .settings-sidebar a {
+        color: white;
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+
+    .settings-sidebar a:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-sidebar a.active {
+        background-color: rgba(255, 255, 255, 0.2);
+        font-weight: 600;
+    }
+
+    @media (max-width: 767px) {
+        .settings-sidebar {
+            border-radius: 0.375rem 0.375rem 0 0 !important;
+        }
+    }
+</style>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-10 col-xl-9">
+            <div class="card border-0 rounded-3 overflow-hidden">
+                <div class="row g-0">
+                    <!-- Sidebar Menu -->
+                    <div class="col-md-4 col-lg-3 settings-sidebar">
+                        <div class="p-4">
+                            <div class="d-flex align-items-center mb-4">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" alt="Avatar" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                    <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px; font-size: 1.5rem; font-weight: 600;">
+                                        {{ user.first_name|first|default:user.username|first|upper }}
+                                    </div>
+                                {% endif %}
+                                <div class="small">
+                                    <div class="fw-bold">{{ user.first_name|default:user.username }}</div>
+                                    <div class="opacity-75">{{ user.email }}</div>
+                                </div>
+                            </div>
+
+                            <nav class="nav flex-column gap-1">
+                                <a href="{% url 'accounts:profile' %}" class="nav-link px-3 py-2 rounded {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                                    <i class="bi bi-person"></i> Profil
+                                </a>
+                                <a href="{% url 'accounts:profile_update' %}" class="nav-link px-3 py-2 rounded {% if request.resolver_match.url_name == 'profile_update' %}active{% endif %}">
+                                    <i class="bi bi-pencil"></i> Profili Düzenle
+                                </a>
+                                <a href="{% url 'accounts:password_change' %}" class="nav-link px-3 py-2 rounded {% if request.resolver_match.url_name == 'password_change' %}active{% endif %}">
+                                    <i class="bi bi-key"></i> Şifre Değiştir
+                                </a>
+                                <a href="{% url 'accounts:email_change' %}" class="nav-link px-3 py-2 rounded {% if request.resolver_match.url_name == 'email_change' %}active{% endif %}">
+                                    <i class="bi bi-envelope"></i> Email Değiştir
+                                </a>
+                                <a href="{% url 'accounts:username_change' %}" class="nav-link px-3 py-2 rounded {% if request.resolver_match.url_name == 'username_change' %}active{% endif %}">
+                                    <i class="bi bi-at"></i> Kullanıcı Adı Değiştir
+                                </a>
+                                <hr class="my-3 opacity-25">
+                                <a href="{% url 'home' %}" class="nav-link px-3 py-2 rounded">
+                                    <i class="bi bi-house"></i> Ana Sayfa
+                                </a>
+                                <a href="{% url 'accounts:logout' %}" class="nav-link px-3 py-2 rounded text-danger">
+                                    <i class="bi bi-box-arrow-right"></i> Çıkış Yap
+                                </a>
+                            </nav>
+                        </div>
+                    </div>
+
+                    <!-- Main Content -->
+                    <div class="col-md-8 col-lg-9 p-4">
+                        <!-- Messages Display -->
+                        {% if messages %}
+                            <div class="mb-3">
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                        {{ message|safe }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        {% block settings_content %}
+                        <!-- Settings pages will override this -->
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

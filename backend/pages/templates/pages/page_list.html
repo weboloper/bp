@@ -1,37 +1,67 @@
-{% extends 'base.html' %}
+{% extends 'core/base_content.html' %}
 
-{% block title %}Sayfalar{% endblock %}
+{% block main_content %}
+<div class="p-4">
+    <h1 class="mb-4">Sayfalar</h1>
 
-{% block content %}
-
-    <h1>Sayfalar</h1>
-        
     {% if pages %}
-        {% for page in pages %}
-            <h2><a href="{% url 'pages:detail' slug=page.slug %}">{{ page.title }}</a></h2>
-                        
-            <div>{{ page.content|truncatewords:30|linebreaks }}</div>
-            <span>Oluşturulma: {{ page.created_at|date:"d M Y" }}</span>
-
-            {% if page.get_children %}
-                    <span>{{ page.get_children.count }} alt sayfa</span>
-            {% endif %}
-      
-            {% if page.get_children %}
-                <h2>Alt Sayfalar</h2>
-                <ul>
-                    {% for child in page.get_children %}
-                        <li>
-                            <a href="{% url 'pages:detail' slug=child.slug %}">
-                                {{ child.title }}
+        <div class="row g-4">
+            {% for page in pages %}
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body">
+                        <h4 class="card-title">
+                            <a href="{% url 'pages:page_detail' page.slug %}" class="text-decoration-none text-dark">
+                                {{ page.title }}
                             </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-                {% endfor %}
-        {% else %}
-            <p>Henüz hiç sayfa eklenmemiş.</p>
-        {% endif %}
+                        </h4>
+                        <p class="card-text text-muted small">
+                            {{ page.content|truncatewords:30 }}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'pages:page_detail' page.slug %}" class="btn btn-sm btn-primary">Devamını Oku →</a>
+                            {% if page.get_children %}
+                                <span class="badge bg-secondary">{{ page.get_children.count }} alt sayfa</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <h4 class="alert-heading">📄 Henüz sayfa yok</h4>
+            <p class="mb-0">Sistemde henüz hiç sayfa eklenmemiş.</p>
+        </div>
+    {% endif %}
 
+    <div class="mt-4 text-center">
+        <a href="{% url 'pages:page_tree' %}" class="btn btn-outline-primary">
+            🌳 Sayfa Ağacını Görüntüle
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block right_sidebar %}
+<div class="widget">
+    <h5>Sayfa Navigasyonu</h5>
+    <ul class="widget-list">
+        <li><a href="{% url 'pages:page_list' %}">Tüm Sayfalar</a></li>
+        <li><a href="{% url 'pages:page_tree' %}">Sayfa Ağacı</a></li>
+        <li><a href="{% url 'pages:page_search' %}">Sayfa Ara</a></li>
+    </ul>
+</div>
+
+{% if pages %}
+<div class="widget">
+    <h5>Sayfalar</h5>
+    <ul class="widget-list">
+        {% for page in pages %}
+            <li><a href="{% url 'pages:page_detail' page.slug %}">{{ page.title }}</a></li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
 {% endblock %}

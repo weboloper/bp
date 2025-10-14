@@ -1,25 +1,88 @@
-{% extends 'base.html' %}
-{% load static %}
+{% extends 'core/base_content.html' %}
 
-{% block content %}
-<main>
-    <div class="container">
-        <div class="info">
-        <strong>Ortam:</strong> {{environment}}<br>
-        <strong>Debug Modu:</strong>{{debug}}<br>
-        <strong>Static Handler:</strong>{{static_handler}}<br>
-        <strong>Zaman:</strong>{{timestamp}}
+{% block main_content %}
+<div class="p-4">
+    <h1 class="mb-4">Hoş Geldiniz</h1>
+    
+    <div class="alert alert-info">
+        <h4 class="alert-heading">👋 Merhaba!</h4>
+        <p class="mb-0">BP Django web uygulamasına hoş geldiniz. Bu modern bir Django şablonudur.</p>
+    </div>
 
-        </div>
-
-        <div class="links">
-        <h3>🔗 Linkler:</h3>
-        <a href="/admin/">🔧 Admin Panel</a>
-        <a href="/accounts/profile/">🧑🏻‍ Profile</a>
-        <a href="/health/">💚 Health Check</a>
-        <a href="/api/">📡 API Docs</a>
-        <a href="/test-email/">📧 Test Email</a>
+    <!-- Sistem Bilgileri -->
+    <div class="card border-0 bg-light mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">⚙️ Sistem Bilgileri</h5>
+            <div class="row g-2 small">
+                <div class="col-md-6">
+                    <strong>Ortam:</strong> {{ environment|default:"development" }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Debug Modu:</strong> {{ debug|yesno:"Açık,Kapalı" }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Static Handler:</strong> {{ static_handler|default:"caddy" }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Zaman:</strong> {{ timestamp|default:"N/A" }}
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="/test-email/" class="btn btn-sm btn-outline-primary">📧 Test Email</a>
+                <a href="/health/" class="btn btn-sm btn-outline-primary">💚 Health Check</a>
+                <a href="/admin/" class="btn btn-sm btn-outline-primary">🔧 Admin</a>
+            </div>
         </div>
     </div>
-</main>
+
+    <div class="row g-4 mt-2">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">🔐 Kullanıcı Yönetimi</h5>
+                    <p class="card-text small text-muted">Kayıt ol, giriş yap, profil yönetimi ve sosyal medya ile giriş özellikleri.</p>
+                    <a href="{% url 'accounts:register' %}" class="btn btn-sm btn-primary">Kayıt Ol</a>
+                    <a href="{% url 'accounts:login' %}" class="btn btn-sm btn-outline-primary">Giriş Yap</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">📝 Blog Sistemi</h5>
+                    <p class="card-text small text-muted">Yazı yazın, paylaşın ve okuyun. Tam özellikli blog sistemi.</p>
+                    <a href="{% url 'posts:post_list' %}" class="btn btn-sm btn-primary">Blog'a Git</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">🚀 Modern Teknolojiler</h5>
+                    <p class="card-text small text-muted">Django, PostgreSQL, Redis, Celery, Docker ve daha fazlası.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">📱 Responsive Tasarım</h5>
+                    <p class="card-text small text-muted">Bootstrap 5 ile mobil uyumlu, modern ve şık arayüz.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="mt-4 p-4 bg-light rounded">
+        <h4>Merhaba, {{ user.username }}! 👋</h4>
+        <p class="mb-2">Hesabınıza başarıyla giriş yaptınız.</p>
+        <a href="{% url 'accounts:profile' %}" class="btn btn-sm btn-primary">Profilimi Görüntüle</a>
+        <a href="{% url 'posts:post_list' %}" class="btn btn-sm btn-outline-primary">Blog'a Git</a>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}

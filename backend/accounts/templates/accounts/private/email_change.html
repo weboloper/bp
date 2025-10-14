@@ -1,56 +1,61 @@
-{% extends 'accounts/base_authenticated.html' %}
+{% extends 'accounts/settings_base.html' %}
 
-{% block main_content %}
-<div class="form-container">
-    <div class="form-card">
-        <h2>Email Değiştir</h2>
-        
-        <div class="info-alert">
-            <strong>📧 Mevcut Email:</strong> {{ user.email }}
-        </div>
+{% block settings_content %}
+<h4 class="mb-1">Email Değiştir</h4>
+<p class="text-muted small mb-3">Yeni email adresinize doğrulama linki gönderilecek</p>
 
-        <div class="warning-alert">
-            <strong>⚠️ Önemli:</strong>
-            <ul>
-                <li>Mevcut şifreniz gerekli</li>
-                <li>Yeni email adresinize doğrulama linki gönderilecek</li>
-                <li>Eski email adresinize bilgilendirme gönderilecek</li>
-            </ul>
-        </div>
-        
-        <form method="post">
-            {% csrf_token %}
-            
-            <div class="form-group">
-                <label for="current_password">Mevcut Şifre</label>
-                <input type="password" id="current_password" name="current_password" required>
-                {% if errors.current_password %}
-                    <div class="error">
-                        {% for error in errors.current_password %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-                <small>Güvenlik için mevcut şifrenizi girin</small>
-            </div>
-
-            <div class="form-group">
-                <label for="new_email">Yeni Email Adresi</label>
-                <input type="email" id="new_email" name="new_email" value="{{ new_email }}" required>
-                {% if errors.new_email %}
-                    <div class="error">
-                        {% for error in errors.new_email %}
-                            {{ error }}
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="form-actions">
-                <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">← Geri</a>
-                <button type="submit" class="btn btn-primary">Email Değiştirme Talebinde Bulun</button>
-            </div>
-        </form>
-    </div>
+<div class="alert alert-info py-2 mb-3">
+    <small><strong>📧 Mevcut Email:</strong> {{ user.email }}</small>
 </div>
+
+<div class="alert alert-warning py-2 mb-4">
+    <small>
+        <strong>⚠️ Önemli:</strong>
+        <ul class="mb-0 mt-1 ps-3 small">
+            <li>Mevcut şifreniz gerekli</li>
+            <li>Yeni email adresinize doğrulama linki gönderilecek</li>
+            <li>Eski email adresinize bilgilendirme gönderilecek</li>
+        </ul>
+    </small>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    
+    <div class="mb-3">
+        <label for="current_password" class="form-label small">Mevcut Şifre</label>
+        <input type="password" 
+               class="form-control {% if errors.current_password %}is-invalid{% endif %}" 
+               id="current_password" 
+               name="current_password" 
+               required 
+               autofocus>
+        {% if errors.current_password %}
+            <div class="invalid-feedback">
+                {% for error in errors.current_password %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+        <div class="form-text">Güvenlik için mevcut şifrenizi girin</div>
+    </div>
+
+    <div class="mb-4">
+        <label for="new_email" class="form-label small">Yeni Email Adresi</label>
+        <input type="email" 
+               class="form-control {% if errors.new_email %}is-invalid{% endif %}" 
+               id="new_email" 
+               name="new_email" 
+               value="{{ new_email }}" 
+               required>
+        {% if errors.new_email %}
+            <div class="invalid-feedback">
+                {% for error in errors.new_email %}{{ error }}{% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{% url 'accounts:profile' %}" class="btn btn-secondary">İptal</a>
+        <button type="submit" class="btn btn-primary">Email Değiştir</button>
+    </div>
+</form>
 {% endblock %}

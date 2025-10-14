@@ -1,0 +1,103 @@
+{% extends 'core/base_content.html' %}
+
+{% block main_content %}
+<div class="p-4">
+    <h1 class="mb-4">🔍 Sayfa Arama</h1>
+
+    <!-- Search Form -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'pages:page_search' %}">
+                <div class="input-group">
+                    <input type="text" 
+                           class="form-control form-control-lg" 
+                           name="q" 
+                           value="{{ query }}" 
+                           placeholder="Sayfalarda ara..." 
+                           autofocus>
+                    <button class="btn btn-primary" type="submit">Ara</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Search Results -->
+    {% if query %}
+        <h3 class="mb-3">
+            Arama Sonuçları 
+            <span class="badge bg-primary">{{ result_count }} sonuç</span>
+        </h3>
+
+        {% if results %}
+            <div class="row g-4">
+                {% for page in results %}
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h4 class="card-title">
+                                <a href="{% url 'pages:page_detail' page.slug %}" class="text-decoration-none text-dark">
+                                    {{ page.title }}
+                                </a>
+                            </h4>
+                            
+                            <!-- Breadcrumb -->
+                            {% if page.parent %}
+                            <nav aria-label="breadcrumb" class="mb-2">
+                                <ol class="breadcrumb breadcrumb-sm mb-0">
+                                    {% for ancestor in page.get_ancestors %}
+                                        <li class="breadcrumb-item small">{{ ancestor.title }}</li>
+                                    {% endfor %}
+                                    <li class="breadcrumb-item active small" aria-current="page">{{ page.title }}</li>
+                                </ol>
+                            </nav>
+                            {% endif %}
+
+                            <p class="card-text text-muted">
+                                {{ page.content|truncatewords:40 }}
+                            </p>
+                            
+                            <a href="{% url 'pages:page_detail' page.slug %}" class="btn btn-sm btn-primary">
+                                Sayfayı Görüntüle →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <h4 class="alert-heading">😕 Sonuç bulunamadı</h4>
+                <p class="mb-0">"{{ query }}" araması için hiçbir sayfa bulunamadı. Farklı bir arama terimi deneyin.</p>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <h4 class="alert-heading">💡 Nasıl arama yapılır?</h4>
+            <ul class="mb-0">
+                <li>Yukarıdaki arama kutusuna bir kelime veya ifade girin</li>
+                <li>Sayfa başlıkları ve içeriklerinde arama yapılır</li>
+                <li>Büyük/küçük harf farkı gözetmez</li>
+            </ul>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block right_sidebar %}
+<div class="widget">
+    <h5>Arama İpuçları</h5>
+    <ul class="small mb-0 ps-3">
+        <li class="mb-2">Daha genel terimler kullanın</li>
+        <li class="mb-2">Alternatif kelimeler deneyin</li>
+        <li class="mb-2">Tek kelimelik aramalar daha iyi sonuç verir</li>
+    </ul>
+</div>
+
+<div class="widget">
+    <h5>Hızlı Erişim</h5>
+    <ul class="widget-list">
+        <li><a href="{% url 'pages:page_list' %}">Tüm Sayfalar</a></li>
+        <li><a href="{% url 'pages:page_tree' %}">Sayfa Ağacı</a></li>
+    </ul>
+</div>
+{% endblock %}

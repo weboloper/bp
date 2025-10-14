@@ -1,92 +1,93 @@
-{% extends 'accounts/base_authenticated.html' %}
+{% extends 'accounts/settings_base.html' %}
 
-{% block main_content %}
-<div class="profile-header">
-    <h2>Profil - {{ user.first_name|default:user.username }}</h2>
-</div>
+{% block settings_content %}
+<h4 class="mb-4">Profil</h4>
 
-<div class="profile-content">
-    <div class="profile-section">
-        <h3>Hesap Bilgileri</h3>
+<div class="card border-0 bg-light mb-3">
+    <div class="card-body">
+        <h6 class="card-subtitle mb-3 text-muted small fw-bold text-uppercase">Hesap Bilgileri</h6>
         
-        <div class="profile-field">
-            <label>Kullanıcı Adı:</label>
-            <span>{{ user.username }}</span>
-        </div>
-        
-        <div class="profile-field">
-            <label>Email:</label>
-            <span>{{ user.email }} 
-                {% if user.is_verified %}
-                    <span class="verified">✅ Doğrulanmış</span>
-                {% else %}
-                    <span class="unverified">❌ Doğrulanmamış</span>
-                    <a href="{% url 'accounts:email_verification_resend' %}">Doğrulama linki gönder</a>
-                {% endif %}
-            </span>
-        </div>
-        
-        {% if user.first_name %}
-        <div class="profile-field">
-            <label>Ad:</label>
-            <span>{{ user.first_name }}</span>
-        </div>
-        {% endif %}
-        
-        {% if user.last_name %}
-        <div class="profile-field">
-            <label>Soyad:</label>
-            <span>{{ user.last_name }}</span>
-        </div>
-        {% endif %}
-        
-        <div class="profile-field">
-            <label>Hesap Durumu:</label>
-            <span>{% if user.is_active %}Aktif{% else %}Pasif{% endif %}</span>
-        </div>
-        
-        <div class="profile-field">
-            <label>Kayıt Tarihi:</label>
-            <span>{{ user.date_joined|date:"d M Y" }}</span>
-        </div>
-    </div>
-
-    {% if profile %}
-    <div class="profile-section">
-        <h3>Profil Detayları</h3>
-        
-        {% if profile.avatar %}
-        <div class="profile-field">
-            <label>Profil Resmi:</label>
-            <img src="{{ profile.avatar.url }}" alt="Profil Resmi" class="profile-avatar">
-        </div>
-        {% endif %}
-        
-        {% if profile.birth_date %}
-        <div class="profile-field">
-            <label>Doğum Tarihi:</label>
-            <span>{{ profile.birth_date|date:"d M Y" }}</span>
-        </div>
-        {% endif %}
-        
-        {% if profile.bio %}
-        <div class="profile-field">
-            <label>Hakkımda:</label>
-            <p>{{ profile.bio }}</p>
-        </div>
-        {% endif %}
-    </div>
-    {% endif %}
-
-    <div class="profile-section">
-        <h3>İşlemler</h3>
-        <div class="action-buttons">
-            <a href="{% url 'accounts:profile_update' %}" class="btn btn-primary">Profili Düzenle</a>
-            <a href="{% url 'accounts:password_change' %}" class="btn btn-secondary">Şifre Değiştir</a>
-            <a href="{% url 'accounts:email_change' %}" class="btn btn-secondary">Email Değiştir</a>
-            <a href="{% url 'accounts:username_change' %}" class="btn btn-secondary">Kullanıcı Adı Değiştir</a>
-            <a href="{% url 'accounts:logout' %}" class="btn btn-danger">Çıkış</a>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Kullanıcı Adı</small>
+                <div>{{ user.username }}</div>
+            </div>
+            
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Email</small>
+                <div>
+                    {{ user.email }}
+                    {% if user.is_verified %}
+                        <span class="badge bg-success ms-2">✓ Doğrulanmış</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark ms-2">⚠ Doğrulanmamış</span>
+                        <a href="{% url 'accounts:email_verification_resend' %}" class="small d-block mt-1">Doğrulama linki gönder</a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if user.first_name %}
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Ad</small>
+                <div>{{ user.first_name }}</div>
+            </div>
+            {% endif %}
+            
+            {% if user.last_name %}
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Soyad</small>
+                <div>{{ user.last_name }}</div>
+            </div>
+            {% endif %}
+            
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Hesap Durumu</small>
+                <div>
+                    {% if user.is_active %}
+                        <span class="badge bg-success">Aktif</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Pasif</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Kayıt Tarihi</small>
+                <div>{{ user.date_joined|date:"d M Y" }}</div>
+            </div>
         </div>
     </div>
 </div>
+
+{% if profile %}
+<div class="card border-0 bg-light">
+    <div class="card-body">
+        <h6 class="card-subtitle mb-3 text-muted small fw-bold text-uppercase">Profil Detayları</h6>
+        
+        <div class="row g-3">
+            {% if profile.avatar %}
+            <div class="col-12">
+                <small class="text-muted d-block mb-2">Profil Resmi</small>
+                <img src="{{ profile.avatar.url }}" alt="Profil Resmi" class="rounded" style="width: 100px; height: 100px; object-fit: cover;">
+                <div class="mt-2 small text-muted">URL: {{ profile.avatar.url }}</div>
+            </div>
+            {% endif %}
+            
+            {% if profile.birth_date %}
+            <div class="col-md-6">
+                <small class="text-muted d-block mb-1">Doğum Tarihi</small>
+                <div>{{ profile.birth_date|date:"d M Y" }}</div>
+            </div>
+            {% endif %}
+            
+            {% if profile.bio %}
+            <div class="col-12">
+                <small class="text-muted d-block mb-1">Hakkımda</small>
+                <p class="mb-0">{{ profile.bio }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
