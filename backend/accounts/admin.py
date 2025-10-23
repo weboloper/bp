@@ -58,7 +58,7 @@ class UserAdmin(BaseUserAdmin):
             )
         }),
         (_('Önemli Tarihler'), {
-            'fields': ('last_login', 'date_joined', 'created_at', 'updated_at')
+            'fields': ('last_login', 'date_joined')
         }),
     )
     
@@ -78,7 +78,7 @@ class UserAdmin(BaseUserAdmin):
         }),
     )
     
-    readonly_fields = ('date_joined', 'last_login', 'created_at', 'updated_at')
+    readonly_fields = ('date_joined', 'last_login')
     
     actions = ['activate_users', 'deactivate_users', 'verify_users']
     

@@ -1,4 +1,4 @@
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager,PermissionsMixin
 from django.db import models
 from .utils import validate_alphanumeric_username, validate_image_extension, resize_avatar
 
@@ -27,17 +27,20 @@ class UserManager(BaseUserManager):
         
         return self.create_user(username, email, password, **extra_fields)
 
-class User(AbstractUser):
+class User(AbstractBaseUser,PermissionsMixin):
     # Override default fields
     username = models.CharField(max_length=30, unique=True, validators=[validate_alphanumeric_username])
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)
-    
+    last_name = models.CharField(max_length=30, blank=True)   
+
     # Status fields
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False,verbose_name="E-posta Doğrulandı", help_text="Kullanıcının e-posta adresini doğrulayıp doğrulamadığını belirtir.")
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Dates
+    date_joined = models.DateTimeField(auto_now_add=True)
     
     objects = UserManager()
     
