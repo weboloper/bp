@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_beat',
     'django_celery_results',
+    'compressor',
     
     # Local apps
     'core',
@@ -215,6 +216,11 @@ if (BASE_DIR / 'static').exists():
 
 # Static root - where collectstatic puts files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# Django Compressor Settings
+COMPRESS_ROOT = BASE_DIR / 'static'
+COMPRESS_ENABLED = True
+STATICFILES_FINDERS = ('compressor.finders.CompressorFinder',)
 
 # Static Files Strategy Configuration
 STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='caddy')

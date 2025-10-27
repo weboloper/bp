@@ -57,6 +57,7 @@ sentry-sdk[django]==2.15.0
 
 # Admin & Forms
 django-crispy-forms==2.0
+django-compressor==4.5.1
 
 # API Documentation
 drf-spectacular==0.26.5
