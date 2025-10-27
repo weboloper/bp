@@ -12,7 +12,7 @@
                     <div class="card-body">
                         <h4 class="card-title">
                             <a href="{% url 'pages:page_detail' page.slug %}" class="text-decoration-none text-dark">
-                                {{ page.title }}
+                                {{ page.title }} 
                             </a>
                         </h4>
                         <p class="card-text text-muted small">
@@ -31,7 +31,7 @@
         </div>
     {% else %}
         <div class="alert alert-info">
-            <h4 class="alert-heading">📄 Henüz sayfa yok</h4>
+            <h4 class="alert-heading">📄 Henüz sayfa yok </h4>
             <p class="mb-0">Sistemde henüz hiç sayfa eklenmemiş.</p>
         </div>
     {% endif %}
