@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
+from django.db.models import Q
 from .models import Page
 
 
@@ -79,10 +80,7 @@ def search_pages(request):
         results = Page.objects.filter(
             is_published=True
         ).filter(
-            title__icontains=query
-        ) | Page.objects.filter(
-            is_published=True,
-            content__icontains=query
+            Q(title__icontains=query) | Q(content__icontains=query)
         ).distinct().order_by('order', 'title')
     
     context = {
