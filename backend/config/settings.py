@@ -520,7 +520,7 @@ SUMMERNOTE_CONFIG = {
     # Using Bootstrap 4
     'summernote': {
         # Change editor size
-        'width': '100%',
+        # 'width': '100%',
         'height': '480',
 
         # Use proper toolbar
