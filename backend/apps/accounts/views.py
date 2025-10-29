@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from accounts.models import User, Profile
 from accounts.utils import validate_alphanumeric_username
-from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordChangeForm, EmailChangeForm, ProfileUpdateForm, ProfileDetailsForm, UsernameChangeForm
+from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordSetForm, PasswordChangeForm, EmailChangeForm, ProfileUpdateForm, ProfileDetailsForm, UsernameChangeForm
 from core.email_service import EmailService
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -333,28 +333,47 @@ def email_verification_resend_view(request):
     return render(request, 'accounts/public/email_verification_resend.html')
 
 def password_change_view(request):
-    """Login olan kullanıcının şifre değiştirme formu"""
+    """
+    Login olan kullanıcının şifre değiştirme/oluşturma formu
+
+    - Sosyal medya ile giriş yapanlar: PasswordSetForm (current password gerektirmez)
+    - Normal kullanıcılar: PasswordChangeForm (current password gerektirir)
+    """
     if not request.user.is_authenticated:
         return redirect('accounts:login')
-    
+
+    # Kullanıcının password'ü var mı kontrol et
+    has_password = request.user.has_usable_password()
+
+    # Sosyal medya kullanıcısı için farklı form
+    FormClass = PasswordChangeForm if has_password else PasswordSetForm
+
     if request.method == 'POST':
-        form = PasswordChangeForm(request.user, request.POST)
-        
+        form = FormClass(request.user, request.POST)
+
         if form.is_valid():
             form.save()
-            
+
             # Update session to keep user logged in after password change
             from django.contrib.auth import update_session_auth_hash
             update_session_auth_hash(request, request.user)
-            
-            messages.success(request, 'Şifreniz başarıyla değiştirildi.')
+
+            # Sosyal medya kullanıcısı ilk defa password oluşturduysa
+            success_message = 'Şifreniz başarıyla oluşturuldu.' if not has_password else 'Şifreniz başarıyla değiştirildi.'
+            messages.success(request, success_message)
             return redirect('accounts:profile')
-        
+
         return render(request, 'accounts/private/password_change.html', {
-            'errors': form.errors
+            'form': form,
+            'errors': form.errors,
+            'has_password': has_password
         })
-    
-    return render(request, 'accounts/private/password_change.html')
+
+    form = FormClass(request.user)
+    return render(request, 'accounts/private/password_change.html', {
+        'form': form,
+        'has_password': has_password
+    })
 
 def email_change_view(request):
     """Login olan kullanıcının email değiştirme formu"""

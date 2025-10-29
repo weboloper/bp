@@ -204,65 +204,120 @@ class EmailVerificationResendForm(forms.Form):
             return None
 
 
-class PasswordChangeForm(forms.Form):
-    current_password = forms.CharField(required=True, widget=forms.PasswordInput)
+class PasswordSetForm(forms.Form):
+    """
+    Password olmayan kullanıcılar için (sosyal medya ile giriş yapanlar)
+    Current password gerektirmez
+    """
     new_password1 = forms.CharField(required=True, widget=forms.PasswordInput)
     new_password2 = forms.CharField(required=True, widget=forms.PasswordInput)
-    
+
     def __init__(self, user, *args, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
-    
-    def clean_current_password(self):
-        current_password = self.cleaned_data.get('current_password', '')
-        
-        if not current_password:
-            raise ValidationError('Mevcut şifre gerekli')
-        
-        # Check if current password is correct
-        if not self.user.check_password(current_password):
-            raise ValidationError('Mevcut şifre yanlış')
-        
-        return current_password
-    
+
     def clean_new_password1(self):
         new_password1 = self.cleaned_data.get('new_password1', '')
-        
+
         if not new_password1:
             raise ValidationError('Yeni şifre gerekli')
-        
+
         # Django's built-in password validation with user context
         try:
             validate_password(new_password1, self.user)
         except ValidationError as e:
             raise ValidationError(' '.join(e.messages))
-        
+
         return new_password1
-    
+
     def clean_new_password2(self):
         new_password2 = self.cleaned_data.get('new_password2', '')
-        
+
         if not new_password2:
             raise ValidationError('Yeni şifre tekrarı gerekli')
-        
+
         return new_password2
-    
+
+    def clean(self):
+        cleaned_data = super().clean()
+        new_password1 = cleaned_data.get('new_password1')
+        new_password2 = cleaned_data.get('new_password2')
+
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise ValidationError({'new_password2': 'Şifreler eşleşmiyor'})
+
+        return cleaned_data
+
+    def save(self):
+        self.user.set_password(self.cleaned_data['new_password1'])
+        self.user.save()
+        return self.user
+
+
+class PasswordChangeForm(forms.Form):
+    """
+    Password olan kullanıcılar için
+    Current password gerektirir
+    """
+    current_password = forms.CharField(required=True, widget=forms.PasswordInput)
+    new_password1 = forms.CharField(required=True, widget=forms.PasswordInput)
+    new_password2 = forms.CharField(required=True, widget=forms.PasswordInput)
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+
+    def clean_current_password(self):
+        current_password = self.cleaned_data.get('current_password', '')
+
+        if not current_password:
+            raise ValidationError('Mevcut şifre gerekli')
+
+        # Check if current password is correct
+        if not self.user.check_password(current_password):
+            raise ValidationError('Mevcut şifre yanlış')
+
+        return current_password
+
+    def clean_new_password1(self):
+        new_password1 = self.cleaned_data.get('new_password1', '')
+
+        if not new_password1:
+            raise ValidationError('Yeni şifre gerekli')
+
+        # Django's built-in password validation with user context
+        try:
+            validate_password(new_password1, self.user)
+        except ValidationError as e:
+            raise ValidationError(' '.join(e.messages))
+
+        return new_password1
+
+    def clean_new_password2(self):
+        new_password2 = self.cleaned_data.get('new_password2', '')
+
+        if not new_password2:
+            raise ValidationError('Yeni şifre tekrarı gerekli')
+
+        return new_password2
+
     def clean(self):
         cleaned_data = super().clean()
         new_password1 = cleaned_data.get('new_password1')
         new_password2 = cleaned_data.get('new_password2')
         current_password = cleaned_data.get('current_password')
-        
+
         if new_password1 and new_password2:
             if new_password1 != new_password2:
                 raise ValidationError({'new_password2': 'Yeni şifreler eşleşmiyor'})
-        
+
         if current_password and new_password1:
             if current_password == new_password1:
                 raise ValidationError({'new_password1': 'Yeni şifre mevcut şifre ile aynı olamaz'})
-        
+
         return cleaned_data
-    
+
     def save(self):
         """Kullanıcının şifresini güncelle"""
         new_password = self.cleaned_data['new_password1']

@@ -12,11 +12,12 @@ from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from core.email_service import EmailService
 from .serializers import (
-    CustomTokenObtainPairSerializer, 
+    CustomTokenObtainPairSerializer,
     UserRegistrationSerializer,
     PasswordResetSerializer,
     PasswordResetConfirmSerializer,
     EmailVerificationResendSerializer,
+    PasswordSetSerializer,
     PasswordChangeSerializer,
     EmailChangeSerializer,
     ProfileUpdateSerializer,
@@ -391,33 +392,52 @@ class PasswordResetConfirmAPIView(APIView):
 @method_decorator(ratelimit(key='user', rate='10/h', method='POST'), name='post')
 class PasswordChangeAPIView(APIView):
     """
-    Password change endpoint for authenticated users
+    Password change/set endpoint for authenticated users
+
+    - Users with existing password: requires current_password
+    - Social login users (no password): does not require current_password
+
     Rate limited: 10 requests per hour per user
     """
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         """
-        Change user password
+        Change or set user password
+
+        Automatically selects the appropriate serializer based on whether
+        the user has an existing password.
         """
-        serializer = PasswordChangeSerializer(data=request.data, user=request.user)
-        
+        # Check if user has usable password
+        has_password = request.user.has_usable_password()
+
+        # Select appropriate serializer
+        SerializerClass = PasswordChangeSerializer if has_password else PasswordSetSerializer
+
+        serializer = SerializerClass(data=request.data, user=request.user)
+
         if serializer.is_valid():
             try:
                 # Save new password
                 serializer.save()
-                
+
+                # Different message based on whether setting or changing
+                success_message = 'Şifreniz başarıyla değiştirildi' if has_password else 'Şifreniz başarıyla oluşturuldu'
+
                 return Response(
-                    {'detail': 'Şifreniz başarıyla değiştirildi'}, 
+                    {
+                        'detail': success_message,
+                        'has_password': True  # User now has a password
+                    },
                     status=status.HTTP_200_OK
                 )
-                
+
             except Exception as e:
                 return Response(
-                    {'detail': 'Şifre değiştirme sırasında hata oluştu'}, 
+                    {'detail': 'Şifre işlemi sırasında hata oluştu'},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-        
+
         # Return validation errors - DRF default format
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -728,6 +748,7 @@ class MeAPIView(APIView):
             'last_name': last_name,
             'is_active': user.is_active,
             'is_verified': user.is_verified,
+            'has_password': user.has_usable_password(),
             'date_joined': user.date_joined,
             'last_login': user.last_login,
             'profile': profile_data

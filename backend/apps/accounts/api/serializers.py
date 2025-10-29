@@ -118,23 +118,18 @@ class PasswordResetSerializer(serializers.Serializer):
             return None
 
 
-class PasswordChangeSerializer(serializers.Serializer):
-    """Password change serializer"""
-    current_password = serializers.CharField(write_only=True, required=True)
+class PasswordSetSerializer(serializers.Serializer):
+    """
+    Password set serializer for social login users
+    Does not require current password
+    """
     new_password1 = serializers.CharField(write_only=True, required=True)
     new_password2 = serializers.CharField(write_only=True, required=True)
-    
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-    
-    def validate_current_password(self, value):
-        if not value:
-            raise serializers.ValidationError('Mevcut şifre gerekli')
-        if self.user and not self.user.check_password(value):
-            raise serializers.ValidationError('Mevcut şifre yanlış')
-        return value
-    
+
     def validate_new_password1(self, value):
         if not value:
             raise serializers.ValidationError('Yeni şifre gerekli')
@@ -144,26 +139,79 @@ class PasswordChangeSerializer(serializers.Serializer):
             except ValidationError as e:
                 raise serializers.ValidationError(' '.join(e.messages))
         return value
-    
+
     def validate_new_password2(self, value):
         if not value:
             raise serializers.ValidationError('Yeni şifre tekrarı gerekli')
         return value
-    
+
+    def validate(self, attrs):
+        new_password1 = attrs.get('new_password1')
+        new_password2 = attrs.get('new_password2')
+
+        if new_password1 and new_password2:
+            if new_password1 != new_password2:
+                raise serializers.ValidationError({'new_password2': 'Şifreler eşleşmiyor'})
+        return attrs
+
+    def save(self):
+        if not self.user:
+            raise serializers.ValidationError('User not provided')
+        new_password = self.validated_data['new_password1']
+        self.user.set_password(new_password)
+        self.user.save()
+        return self.user
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    """
+    Password change serializer for users with existing password
+    Requires current password
+    """
+    current_password = serializers.CharField(write_only=True, required=True)
+    new_password1 = serializers.CharField(write_only=True, required=True)
+    new_password2 = serializers.CharField(write_only=True, required=True)
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+    def validate_current_password(self, value):
+        if not value:
+            raise serializers.ValidationError('Mevcut şifre gerekli')
+        if self.user and not self.user.check_password(value):
+            raise serializers.ValidationError('Mevcut şifre yanlış')
+        return value
+
+    def validate_new_password1(self, value):
+        if not value:
+            raise serializers.ValidationError('Yeni şifre gerekli')
+        if self.user:
+            try:
+                validate_password(value, self.user)
+            except ValidationError as e:
+                raise serializers.ValidationError(' '.join(e.messages))
+        return value
+
+    def validate_new_password2(self, value):
+        if not value:
+            raise serializers.ValidationError('Yeni şifre tekrarı gerekli')
+        return value
+
     def validate(self, attrs):
         new_password1 = attrs.get('new_password1')
         new_password2 = attrs.get('new_password2')
         current_password = attrs.get('current_password')
-        
+
         if new_password1 and new_password2:
             if new_password1 != new_password2:
                 raise serializers.ValidationError({'new_password2': 'Yeni şifreler eşleşmiyor'})
-        
+
         if current_password and new_password1:
             if current_password == new_password1:
                 raise serializers.ValidationError({'new_password1': 'Yeni şifre mevcut şifre ile aynı olamaz'})
         return attrs
-    
+
     def save(self):
         if not self.user:
             raise serializers.ValidationError('User not provided')
