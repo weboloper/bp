@@ -701,32 +701,38 @@ class MeAPIView(APIView):
         Get current user profile
         """
         user = request.user
-        
+
         # Get or create profile if it doesn't exist
         profile_data = None
+        first_name = ''
+        last_name = ''
         if hasattr(user, 'profile'):
             profile = user.profile
+            first_name = profile.first_name
+            last_name = profile.last_name
             profile_data = {
+                'first_name': profile.first_name,
+                'last_name': profile.last_name,
                 'birth_date': profile.birth_date,
                 'bio': profile.bio,
                 'avatar': profile.avatar.url if profile.avatar else None,
                 'created_at': profile.created_at,
                 'updated_at': profile.updated_at,
             }
-        
+
         data = {
             'id': user.id,
             'username': user.username,
             'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
+            'first_name': first_name,
+            'last_name': last_name,
             'is_active': user.is_active,
             'is_verified': user.is_verified,
             'date_joined': user.date_joined,
             'last_login': user.last_login,
             'profile': profile_data
         }
-        
+
         return Response(data, status=status.HTTP_200_OK)
     
     @method_decorator(ratelimit(key='user', rate='20/h', method='PATCH'))
@@ -736,41 +742,47 @@ class MeAPIView(APIView):
         Rate limited: 20 requests per hour per user
         """
         serializer = ProfileUpdateSerializer(data=request.data, user=request.user)
-        
+
         if serializer.is_valid():
             try:
                 # Save updated profile
                 user = serializer.save()
-                
+
                 # Return updated profile data
                 profile_data = None
+                first_name = ''
+                last_name = ''
                 if hasattr(user, 'profile'):
                     profile = user.profile
+                    first_name = profile.first_name
+                    last_name = profile.last_name
                     profile_data = {
+                        'first_name': profile.first_name,
+                        'last_name': profile.last_name,
                         'birth_date': profile.birth_date,
                         'bio': profile.bio,
                         'avatar': profile.avatar.url if profile.avatar else None,
                         'created_at': profile.created_at,
                         'updated_at': profile.updated_at,
                     }
-                
+
                 return Response({
                     'detail': 'Profiliniz başarıyla güncellendi.',
                     'user': {
                         'id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'first_name': user.first_name,
-                        'last_name': user.last_name,
+                        'first_name': first_name,
+                        'last_name': last_name,
                         'profile': profile_data
                     }
                 }, status=status.HTTP_200_OK)
-                
+
             except Exception as e:
                 return Response(
-                    {'detail': 'Profil güncellemesi sırasında hata oluştu'}, 
+                    {'detail': 'Profil güncellemesi sırasında hata oluştu'},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-        
+
         # Return validation errors - DRF default format
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

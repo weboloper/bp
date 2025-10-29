@@ -6,7 +6,7 @@
 
 {% block email_content %}
 <div style="text-align: center; margin-bottom: 30px;">
-    <h2 style="color: #28a745; margin: 0 0 10px 0;">Merhaba {{ user.first_name|default:user.username }}!</h2>
+    <h2 style="color: #28a745; margin: 0 0 10px 0;">Merhaba {{ user.profile.first_name|default:user.username }}!</h2>
     <p style="font-size: 18px; color: #6c757d; margin: 0;">BP Django App'e başarıyla kayıt oldunuz.</p>
 </div>
 

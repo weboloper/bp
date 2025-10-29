@@ -584,7 +584,7 @@ def apple_callback_view(request):
         user = apple_auth.authenticate(id_token)
         
         # Apple'a özel: İlk login'de isim bilgisi ayrı JSON'da gelir
-        # Bu bilgiyi yakalayarak user'ı güncelle
+        # Bu bilgiyi yakalayarak profile'ı güncelle
         if user_json:
             try:
                 import json
@@ -592,13 +592,25 @@ def apple_callback_view(request):
                 name = user_info.get('name', {})
                 first_name = name.get('firstName', '')
                 last_name = name.get('lastName', '')
-                
-                # Sadece isim boşsa güncelle (ilk login)
-                if first_name and not user.first_name:
-                    user.first_name = first_name
-                if last_name and not user.last_name:
-                    user.last_name = last_name
-                    user.save()
+
+                # Profile'ı güncelle (sadece isim boşsa)
+                try:
+                    profile = user.profile
+                    profile_updated = False
+
+                    if first_name and not profile.first_name:
+                        profile.first_name = first_name
+                        profile_updated = True
+                    if last_name and not profile.last_name:
+                        profile.last_name = last_name
+                        profile_updated = True
+
+                    if profile_updated:
+                        profile.save()
+
+                except Exception as profile_error:
+                    print(f"Apple login - Profile güncelleme hatası: {profile_error}")
+
             except Exception as e:
                 # İsim bilgisi alınamazsa devam et
                 print(f"Apple login - İsim bilgisi alınamadı: {e}")

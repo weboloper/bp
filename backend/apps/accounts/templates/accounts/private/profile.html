@@ -26,17 +26,17 @@
                 </div>
             </div>
             
-            {% if user.first_name %}
+            {% if user.profile.first_name %}
             <div class="col-md-6">
                 <small class="text-muted d-block mb-1">Ad</small>
-                <div>{{ user.first_name }}</div>
+                <div>{{ user.profile.first_name }}</div>
             </div>
             {% endif %}
             
-            {% if user.last_name %}
+            {% if user.profile.last_name %}
             <div class="col-md-6">
                 <small class="text-muted d-block mb-1">Soyad</small>
-                <div>{{ user.last_name }}</div>
+                <div>{{ user.profile.last_name }}</div>
             </div>
             {% endif %}
             

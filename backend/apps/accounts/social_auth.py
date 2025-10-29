@@ -174,55 +174,73 @@ class BaseSocialAuth:
         try:
             # Mevcut kullanıcı var mı?
             user = User.objects.get(email__iexact=email)
-            
+
             # Kullanıcı bilgilerini güncelle (eğer boş ise)
-            updated = False
-            
-            if not user.first_name and user_data.get('first_name'):
-                user.first_name = user_data['first_name']
-                updated = True
-            
-            if not user.last_name and user_data.get('last_name'):
-                user.last_name = user_data['last_name']
-                updated = True
-            
+            user_updated = False
+
             # Social login ile gelen kullanıcı doğrulanmış sayılır
             if not user.is_verified:
                 user.is_verified = True
-                updated = True
-            
-            if updated:
+                user_updated = True
+
+            if user_updated:
                 user.save()
-            
+
+            # Profile bilgilerini güncelle (eğer boş ise)
+            try:
+                profile = user.profile
+                profile_updated = False
+
+                if not profile.first_name and user_data.get('first_name'):
+                    profile.first_name = user_data['first_name']
+                    profile_updated = True
+
+                if not profile.last_name and user_data.get('last_name'):
+                    profile.last_name = user_data['last_name']
+                    profile_updated = True
+
+                if profile_updated:
+                    profile.save()
+
+            except Profile.DoesNotExist:
+                # Profile yoksa oluştur
+                Profile.objects.create(
+                    user=user,
+                    first_name=user_data.get('first_name', ''),
+                    last_name=user_data.get('last_name', ''),
+                    bio=f'{self.provider_name.capitalize()} ile katıldı'
+                )
+
             return user
             
         except User.DoesNotExist:
             # Yeni kullanıcı oluştur
             username = self.generate_unique_username(email)
-            
+
             user = User.objects.create_user(
                 username=username,
                 email=email,
-                first_name=user_data.get('first_name', ''),
-                last_name=user_data.get('last_name', ''),
                 is_verified=True  # Social login ile verified
             )
-            
-            # Profil oluştur
-            self.create_profile(user)
-            
+
+            # Profil oluştur (first_name ve last_name ile)
+            self.create_profile(user, user_data)
+
             return user
     
-    def create_profile(self, user):
+    def create_profile(self, user, user_data=None):
         """
         Yeni kullanıcı için profile oluştur
-        
+
         Args:
             user (User): Django User instance
+            user_data (dict, optional): User data with first_name and last_name
         """
         try:
             Profile.objects.create(
                 user=user,
+                first_name=user_data.get('first_name', '') if user_data else '',
+                last_name=user_data.get('last_name', '') if user_data else '',
                 bio=f'{self.provider_name.capitalize()} ile katıldı'
             )
         except Exception as e:

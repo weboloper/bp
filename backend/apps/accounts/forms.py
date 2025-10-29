@@ -65,9 +65,7 @@ class UserRegistrationForm(forms.ModelForm):
         # Create a temporary user instance for validation (not saved)
         temp_user = User(
             username=self.cleaned_data.get('username', ''),
-            email=self.cleaned_data.get('email', ''),
-            first_name=self.cleaned_data.get('first_name', ''),
-            last_name=self.cleaned_data.get('last_name', '')
+            email=self.cleaned_data.get('email', '')
         )
         
         # Django's built-in password validation with user context
@@ -318,43 +316,39 @@ class EmailChangeForm(forms.Form):
 
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
-        model = User
+        model = Profile
         fields = ['first_name', 'last_name']
-    
+
     def __init__(self, user, *args, **kwargs):
         self.user = user
-        super().__init__(*args, **kwargs)
-        
-        # Set initial data for user fields
-        if not kwargs.get('data'):
-            self.initial['first_name'] = user.first_name
-            self.initial['last_name'] = user.last_name
-    
+        # Get or create profile
+        try:
+            profile = user.profile
+        except Profile.DoesNotExist:
+            profile = Profile.objects.create(user=user)
+
+        super().__init__(instance=profile, *args, **kwargs)
+
     def clean_first_name(self):
         first_name = self.cleaned_data.get('first_name', '').strip()
-        
+
         if len(first_name) > 30:
             raise ValidationError('Ad en fazla 30 karakter olabilir')
-        
+
         return first_name
-    
+
     def clean_last_name(self):
         last_name = self.cleaned_data.get('last_name', '').strip()
-        
+
         if len(last_name) > 30:
             raise ValidationError('Soyad en fazla 30 karakter olabilir')
-        
+
         return last_name
-    
+
     def save(self, commit=True):
-        # Update user fields
-        self.user.first_name = self.cleaned_data['first_name']
-        self.user.last_name = self.cleaned_data['last_name']
-        
-        if commit:
-            self.user.save()
-        
-        return self.user
+        # Update profile fields
+        profile = super().save(commit=commit)
+        return profile
 
 
 class ProfileDetailsForm(forms.ModelForm):

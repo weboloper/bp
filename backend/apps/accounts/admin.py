@@ -9,7 +9,7 @@ class ProfileInline(admin.StackedInline):
     can_delete = False
     verbose_name_plural = _('Profil')
     extra = 0
-    fields = ('birth_date', 'bio', 'avatar')
+    fields = ('first_name', 'last_name', 'birth_date', 'bio', 'avatar')
 
 
 @admin.register(User)
@@ -19,8 +19,6 @@ class UserAdmin(BaseUserAdmin):
     list_display = (
         'username',
         'email',
-        'first_name', 
-        'last_name',
         'is_active',
         'is_staff',
         'is_verified',
@@ -36,16 +34,13 @@ class UserAdmin(BaseUserAdmin):
         'last_login',
     )
     
-    search_fields = ('username', 'email', 'first_name', 'last_name')
+    search_fields = ('username', 'email', 'profile__first_name', 'profile__last_name')
     ordering = ('-date_joined',)
     filter_horizontal = ('groups', 'user_permissions')
     
     fieldsets = (
         (None, {
             'fields': ('username', 'email', 'password')
-        }),
-        (_('Kişisel Bilgiler'), {
-            'fields': ('first_name', 'last_name')
         }),
         (_('İzinler'), {
             'fields': (
@@ -68,8 +63,6 @@ class UserAdmin(BaseUserAdmin):
             'fields': (
                 'username',
                 'email',
-                'first_name',
-                'last_name',
                 'password1',
                 'password2',
                 'is_active',
@@ -98,16 +91,16 @@ class UserAdmin(BaseUserAdmin):
     verify_users.short_description = _('Seçili kullanıcıları doğrula')
 
 
-@admin.register(Profile)  
+@admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'birth_date', 'created_at')
+    list_display = ('user', 'first_name', 'last_name', 'birth_date', 'created_at')
     list_filter = ('created_at', 'updated_at')
-    search_fields = ('user__username', 'user__email', 'user__first_name', 'user__last_name', 'bio')
+    search_fields = ('user__username', 'user__email', 'first_name', 'last_name', 'bio')
     ordering = ('-created_at',)
     
     fieldsets = (
         (_('Temel Bilgiler'), {
-            'fields': ('user', 'birth_date', 'bio', 'avatar')
+            'fields': ('user', 'first_name', 'last_name', 'birth_date', 'bio', 'avatar')
         }),
         (_('Tarihler'), {
             'fields': ('created_at', 'updated_at'),

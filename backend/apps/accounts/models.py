@@ -28,11 +28,9 @@ class UserManager(BaseUserManager):
         return self.create_user(username, email, password, **extra_fields)
 
 class User(AbstractBaseUser,PermissionsMixin):
-    # Override default fields
+    # Authentication fields
     username = models.CharField(max_length=30, unique=True, validators=[validate_alphanumeric_username])
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=30, blank=True)
-    last_name = models.CharField(max_length=30, blank=True)   
 
     # Status fields
     is_active = models.BooleanField(default=True)
@@ -56,6 +54,8 @@ class User(AbstractBaseUser,PermissionsMixin):
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    first_name = models.CharField(max_length=30, blank=True)
+    last_name = models.CharField(max_length=30, blank=True)
     birth_date = models.DateField(null=True, blank=True)
     bio = models.TextField(max_length=500, blank=True)
     avatar = models.ImageField(upload_to='avatars/', validators=[validate_image_extension], null=True, blank=True)

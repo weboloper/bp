@@ -332,24 +332,25 @@ class ProfileUpdateSerializer(serializers.Serializer):
     def save(self):
         if not self.user:
             raise serializers.ValidationError('User not provided')
-        
-        self.user.first_name = self.validated_data.get('first_name', self.user.first_name)
-        self.user.last_name = self.validated_data.get('last_name', self.user.last_name)
-        self.user.save()
-        
+
         from accounts.models import Profile
         try:
             profile = self.user.profile
         except Profile.DoesNotExist:
-            profile = Profile.objects.create(user=self.user, birth_date=None, bio='', avatar=None)
-        
+            profile = Profile.objects.create(user=self.user)
+
+        # Update profile fields
+        if 'first_name' in self.validated_data:
+            profile.first_name = self.validated_data['first_name']
+        if 'last_name' in self.validated_data:
+            profile.last_name = self.validated_data['last_name']
         if 'bio' in self.validated_data:
             profile.bio = self.validated_data['bio']
         if 'birth_date' in self.validated_data:
             profile.birth_date = self.validated_data['birth_date']
         if 'avatar' in self.validated_data:
             profile.avatar = self.validated_data['avatar']
-        
+
         profile.save()
         return self.user
 

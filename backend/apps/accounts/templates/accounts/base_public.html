@@ -15,11 +15,11 @@
                     <img src="{{ user.profile.avatar.url }}" alt="Avatar">
                 {% else %}
                     <div class="avatar-placeholder">
-                        {{ user.first_name|first|default:user.username|first|upper }}
+                        {{ user.profile.first_name|first|default:user.username|first|upper }}
                     </div>
                 {% endif %}
 
-                <span class="user-name">{{ user.first_name|default:user.username }}</span>
+                <span class="user-name">{{ user.profile.first_name|default:user.username }}</span>
                 <span class="user-email">{{ user.email }}</span>
                 {% if not user.is_verified %}
                     <span class="unverified">Email Doğrulanmamış</span>

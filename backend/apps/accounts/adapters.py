@@ -60,24 +60,28 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
             
             user.username = username
         
-        # Name fields
-        if not user.first_name:
-            user.first_name = extra_data.get('given_name', '') or extra_data.get('first_name', '')
-        
-        if not user.last_name:
-            user.last_name = extra_data.get('family_name', '') or extra_data.get('last_name', '')
-        
         # Social login ile gelen user'lar verified olsun
         user.is_verified = True
-        
+
         # User'ı kaydet
         user.save()
-        
-        # Profile oluştur (eğer yoksa)
-        if not hasattr(user, 'profile'):
-            from accounts.models import Profile
+
+        # Profile oluştur veya güncelle
+        from accounts.models import Profile
+        try:
+            profile = user.profile
+            # Mevcut profile'ı güncelle (boşsa)
+            if not profile.first_name:
+                profile.first_name = extra_data.get('given_name', '') or extra_data.get('first_name', '')
+            if not profile.last_name:
+                profile.last_name = extra_data.get('family_name', '') or extra_data.get('last_name', '')
+            profile.save()
+        except Profile.DoesNotExist:
+            # Yeni profile oluştur
             Profile.objects.create(
                 user=user,
+                first_name=extra_data.get('given_name', '') or extra_data.get('first_name', ''),
+                last_name=extra_data.get('family_name', '') or extra_data.get('last_name', ''),
                 bio=f"Joined via {sociallogin.account.provider.title()}",
             )
         
@@ -86,25 +90,9 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
     def populate_user(self, request, sociallogin, data):
         """
         User object'ini social login verisiyle doldur
+
+        Note: first_name ve last_name artık Profile modelinde,
+        save_user metodunda profile'a kaydedilir.
         """
         user = super().populate_user(request, sociallogin, data)
-        
-        # Social provider'dan gelen ekstra veriler
-        extra_data = sociallogin.account.extra_data
-        
-        # Provider'a göre özel field mapping
-        if sociallogin.account.provider == 'google':
-            user.first_name = extra_data.get('given_name', '')
-            user.last_name = extra_data.get('family_name', '')
-            
-        elif sociallogin.account.provider == 'facebook':
-            user.first_name = extra_data.get('first_name', '')
-            user.last_name = extra_data.get('last_name', '')
-            
-        elif sociallogin.account.provider == 'apple':
-            # Apple name bilgisini farklı şekilde veriyor
-            name = extra_data.get('name', {})
-            user.first_name = name.get('firstName', '')
-            user.last_name = name.get('lastName', '')
-        
         return user

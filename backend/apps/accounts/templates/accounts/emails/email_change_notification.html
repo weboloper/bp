@@ -9,7 +9,7 @@
 </div>
 
 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-    <p style="margin: 0; color: #495057; font-size: 16px; line-height: 1.6;">Merhaba <strong>{{ user.first_name|default:user.username }}</strong>,</p>
+    <p style="margin: 0; color: #495057; font-size: 16px; line-height: 1.6;">Merhaba <strong>{{ user.profile.first_name|default:user.username }}</strong>,</p>
 </div>
 
 <p style="color: #6c757d; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
