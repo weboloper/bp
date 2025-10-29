@@ -23,7 +23,7 @@
                                 <span class="badge bg-warning text-dark ms-2">Taslak</span>
                             {% endif %}
                         </p>
-                        <p class="card-text">{{ post.content|truncatewords:50 }}</p>
+                        <p class="card-text">{{ post.content|striptags|truncatewords:50 }}</p>
                         <a href="{% url 'posts:post_detail' post.pk %}" class="btn btn-sm btn-primary">Devamını Oku →</a>
                     </div>
                 </div>

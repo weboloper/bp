@@ -26,13 +26,16 @@ handler404 = 'pages.handlers.custom_404_handler'
 urlpatterns = [
     # Admin panel
     path('admin/', admin.site.urls),
-    
+
+    # Summernote editor
+    path('summernote/', include('django_summernote.urls')),
+
     # Core endpoints
     path('', home, name='home'),
     path('health/', health_check, name='health_check'),
     path('test-email/', test_email, name='test_email'),
-   
-    
+
+
     # App URLs
     path('accounts/', include('accounts.urls')),
     path('posts/', include('posts.urls')),
@@ -43,7 +46,7 @@ urlpatterns = [
         path('posts/', include('posts.api.urls')),
         path('pages/', include('pages.api.urls')),
     ])),
-    
+
     # Pages app - FALLBACK (en sonda olmalı)
     path('', include('pages.urls')),
 ]

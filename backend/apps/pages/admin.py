@@ -1,15 +1,17 @@
 from django.contrib import admin
 from .models import Page
+from django_summernote.admin import SummernoteModelAdmin
 
 
 @admin.register(Page)
-class PageAdmin(admin.ModelAdmin):
+class PageAdmin(SummernoteModelAdmin):
     list_display = ['title', 'slug', 'parent', 'is_published', 'order', 'created_at']
     list_filter = ['is_published', 'parent', 'created_at']
     search_fields = ['title', 'content']
     prepopulated_fields = {'slug': ('title',)}
     list_editable = ['is_published', 'order']
     ordering = ['order', 'title']
+    summernote_fields = ('content',)
     
     fieldsets = (
         (None, {

@@ -115,6 +115,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_celery_beat',
     'django_celery_results',
+    'django_summernote',
     
     # Local apps
     'core',
@@ -124,13 +125,14 @@ INSTALLED_APPS = [
     
 ]
 
+# Static Files Handler - defaults to 'django' in DEBUG mode, 'caddy' in production
+# Options: 'django', 'whitenoise', 's3', 'caddy', 'nginx'
+STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='django' if DEBUG else 'caddy')
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
 ]
-
-# Static Files Handler Strategy
-STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='nginx')
 
 # WhiteNoise middleware'i sadece whitenoise handler için ekle
 if STATIC_FILES_HANDLER == 'whitenoise':
@@ -216,18 +218,16 @@ if (BASE_DIR / 'static').exists():
 # Static root - where collectstatic puts files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Static Files Strategy Configuration
-STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='caddy')
-
+# Static Files Storage Configuration (STATIC_FILES_HANDLER defined above)
 if STATIC_FILES_HANDLER == 'whitenoise':
     # WhiteNoise Configuration (cPanel için)
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    
+
     # WhiteNoise ayarları
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_AUTOREFRESH = DEBUG
     WHITENOISE_MAX_AGE = 86400  # 1 day cache
-    
+
     # Compression settings
     if not DEBUG:
         WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
@@ -240,12 +240,12 @@ elif STATIC_FILES_HANDLER == 's3':
     # AWS S3 Configuration
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'  # Media files
-    
+
     AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='us-east-1')
-    
+
     # CloudFront domain (opsiyonel)
     AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', default=None)
     if AWS_S3_CUSTOM_DOMAIN:
@@ -255,7 +255,7 @@ elif STATIC_FILES_HANDLER == 's3':
     else:
         STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/'
         MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/'
-    
+
     AWS_DEFAULT_ACL = env('AWS_DEFAULT_ACL', default='public-read')
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': env('AWS_S3_OBJECT_PARAMETERS_CacheControl', default='max-age=86400'),
@@ -263,13 +263,9 @@ elif STATIC_FILES_HANDLER == 's3':
     AWS_S3_FILE_OVERWRITE = False
     AWS_QUERYSTRING_AUTH = False
 
-elif STATIC_FILES_HANDLER == 'caddy':
-    # Caddy Web Server Configuration
-    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
-    # Caddy static dosyaları serve ediyor, Django karışmasın
-
 else:
-    # Default: Nginx/Apache serve eder (VPS için)
+    # Default: Django, Caddy, Nginx, Apache - all use StaticFilesStorage
+    # Static files are served by the web server or Django's staticfiles app (in DEBUG mode)
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Media files (uploads)
@@ -348,7 +344,7 @@ def check_redis_connection():
     try:
         import redis
         redis_url = env('REDIS_URL', default='redis://redis:6379/0')
-        
+
         # Parse Redis URL
         if redis_url.startswith('redis://'):
             # redis://redis:6379/0 formatı
@@ -359,13 +355,13 @@ def check_redis_connection():
             db = int(port_db[1]) if len(port_db) > 1 else 0
         else:
             host, port, db = 'localhost', 6379, 0
-        
+
         r = redis.Redis(host=host, port=port, db=db, socket_timeout=2)
         r.ping()
-        print(f"✅ Redis connection successful: {host}:{port}/{db}")
+        print(f"[OK] Redis connection successful: {host}:{port}/{db}")
         return True
     except Exception as e:
-        print(f"⚠️ Redis connection failed: {e}")
+        print(f"[WARNING] Redis connection failed: {e}")
         return False
 
 # Redis durumunu kontrol et
@@ -379,9 +375,9 @@ if REDIS_AVAILABLE:
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
     CELERY_TIMEZONE = TIME_ZONE
-    print("🚀 Celery configured with Redis")
+    print("[INFO] Celery configured with Redis")
 else:
-    print("📧 Celery disabled - Redis not available")
+    print("[INFO] Celery disabled - Redis not available")
 
 # Cache Configuration
 if REDIS_AVAILABLE:
@@ -395,11 +391,11 @@ if REDIS_AVAILABLE:
             }
         }
     }
-    print("🗄️ Redis cache enabled")
+    print("[INFO] Redis cache enabled")
 else:
     # Fallback cache (you can choose: dummy, database, or locmem)
     cache_backend = env('FALLBACK_CACHE_BACKEND', default='dummy')  # dummy, database, locmem
-    
+
     if cache_backend == 'database':
         CACHES = {
             'default': {
@@ -407,7 +403,7 @@ else:
                 'LOCATION': 'django_cache_table',
             }
         }
-        print("🗄️ Database cache enabled")
+        print("[INFO] Database cache enabled")
     elif cache_backend == 'locmem':
         CACHES = {
             'default': {
@@ -415,14 +411,14 @@ else:
                 'LOCATION': 'unique-snowflake',
             }
         }
-        print("🗄️ Local memory cache enabled")
+        print("[INFO] Local memory cache enabled")
     else:
         CACHES = {
             'default': {
                 'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
             }
         }
-        print("🗄️ Dummy cache enabled (development)")
+        print("[INFO] Dummy cache enabled (development)")
 
 # Security settings for production
 if not DEBUG:
@@ -467,15 +463,15 @@ SENTRY_DSN = env('SENTRY_DSN', default=None)
 
 # Email Configuration - Redis durumuna göre
 USE_ASYNC_EMAIL = REDIS_AVAILABLE and env('USE_ASYNC_EMAIL', default=False)
-print(f"📧 Async email: {'Enabled' if USE_ASYNC_EMAIL else 'Disabled'}")
+print(f"[INFO] Async email: {'Enabled' if USE_ASYNC_EMAIL else 'Disabled'}")
 
 # Email backend configuration
 if DEBUG and not env('EMAIL_HOST_USER', default=''):
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("📧 Using console email backend (development)")
+    print("[INFO] Using console email backend (development)")
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    print("📧 Using SMTP email backend")
+    print("[INFO] Using SMTP email backend")
 
 # Email Settings (Universal - works with any SMTP provider)
 EMAIL_HOST = env('EMAIL_HOST', default='localhost')
@@ -518,3 +514,72 @@ APPLE_CLIENT_ID = env('APPLE_CLIENT_ID', default='')  # Service ID (Bundle ID)
 APPLE_SECRET = env('APPLE_SECRET', default='')  # Client Secret (opsiyonel)
 APPLE_KEY_ID = env('APPLE_KEY_ID', default='')  # Key ID
 APPLE_TEAM_ID = env('APPLE_TEAM_ID', default='')  # Apple Team ID
+
+# Django Summernote Configuration
+SUMMERNOTE_CONFIG = {
+    # Using Bootstrap 4
+    'summernote': {
+        # Change editor size
+        'width': '100%',
+        'height': '480',
+
+        # Use proper toolbar
+        'toolbar': [
+            ['style', ['style']],
+            ['font', ['bold', 'underline', 'clear']],
+            ['fontname', ['fontname']],
+            ['color', ['color']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture', 'video']],
+            ['view', ['fullscreen', 'codeview', 'help']],
+        ],
+
+        # Set language to Turkish
+        'lang': 'tr-TR',
+    },
+
+    # You can put custom css/js in these lists
+    'css': (),
+    'css_for_inplace': (),
+    'js': (),
+    'js_for_inplace': (),
+
+    # Require user to be authenticated for uploading attachments.
+    'attachment_require_authentication': True,
+    
+    # Set to `True` to use FileField instead of ImageField for attachments
+    'attachment_filesize_limit': 1024 * 1024 * 10,  # 10MB
+
+    # Set to `True` to use absolute URLs for attachments
+    'attachment_absolute_uri': False,
+
+    # Disable uploads
+    'disable_upload': False,
+
+    # Iframe configuration
+    'iframe': True,
+
+    # You can add custom toolbar buttons
+    'popover': {
+        'image': [
+            ['image', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
+            ['float', ['floatLeft', 'floatRight', 'floatNone']],
+            ['remove', ['removeMedia']]
+        ],
+        'link': [
+            ['link', ['linkDialogShow', 'unlink']]
+        ],
+        'table': [
+            ['add', ['addRowDown', 'addRowUp', 'addColLeft', 'addColRight']],
+            ['delete', ['deleteRow', 'deleteCol', 'deleteTable']],
+        ],
+        'air': [
+            ['color', ['color']],
+            ['font', ['bold', 'underline', 'clear']],
+            ['para', ['ul', 'paragraph']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture']]
+        ]
+    },
+}

@@ -1,5 +1,101 @@
 {% extends 'core/base_content.html' %}
 
+{% block extra_css %}
+<style>
+    .post-content {
+        line-height: 1.8;
+        font-size: 1.1rem;
+    }
+
+    .post-content img {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5rem auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .post-content p {
+        margin-bottom: 1rem;
+    }
+
+    .post-content h1,
+    .post-content h2,
+    .post-content h3,
+    .post-content h4,
+    .post-content h5,
+    .post-content h6 {
+        margin-top: 2rem;
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .post-content ul,
+    .post-content ol {
+        margin-bottom: 1rem;
+        padding-left: 2rem;
+    }
+
+    .post-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+    }
+
+    .post-content table th,
+    .post-content table td {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .post-content table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+
+    .post-content blockquote {
+        border-left: 4px solid #0d6efd;
+        padding-left: 1rem;
+        margin: 1.5rem 0;
+        color: #6c757d;
+        font-style: italic;
+    }
+
+    .post-content code {
+        background-color: #f8f9fa;
+        padding: 0.2rem 0.4rem;
+        border-radius: 4px;
+        font-size: 0.9em;
+    }
+
+    .post-content pre {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        margin-bottom: 1rem;
+    }
+
+    .post-content a {
+        color: #0d6efd;
+        text-decoration: underline;
+    }
+
+    .post-content a:hover {
+        color: #0a58ca;
+    }
+
+    .post-content video {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 1.5rem auto;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+
 {% block main_content %}
 <div class="p-4">
     <!-- Post Header -->
@@ -20,7 +116,7 @@
 
         <!-- Post Content -->
         <div class="post-content">
-            {{ post.content|linebreaks }}
+            {{ post.content|safe }}
         </div>
 
         <!-- Post Footer -->
