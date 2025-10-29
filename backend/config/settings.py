@@ -220,7 +220,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Django Compressor Settings
 COMPRESS_ROOT = BASE_DIR / 'static'
 COMPRESS_ENABLED = True
-STATICFILES_FINDERS = ('compressor.finders.CompressorFinder',)
+# STATICFILES_FINDERS = ('compressor.finders.CompressorFinder',)
+
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',  # ✅ STATICFILES_DIRS için
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',  # ✅ App'lerin static/ klasörleri için
+    'compressor.finders.CompressorFinder',  # Compressor için
+]
 
 # Static Files Strategy Configuration
 STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='caddy')
