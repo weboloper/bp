@@ -8,9 +8,95 @@ Her provider (Google, Facebook, vb.) bu base class'ı extend eder.
 import requests
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from accounts.models import Profile
+import os
 
 User = get_user_model()
+
+
+def download_avatar_from_url(image_url, filename=None, user_id=None):
+    """
+    Download avatar from URL and return ContentFile
+
+    Args:
+        image_url (str): URL of the image to download
+        filename (str, optional): Filename for the image. Auto-generated if not provided.
+        user_id (int, optional): User ID for unique filename generation
+
+    Returns:
+        tuple: (ContentFile, filename) ready to save to ImageField
+        None: If download fails
+
+    Example:
+        result = download_avatar_from_url('https://example.com/avatar.jpg', user_id=123)
+        if result:
+            avatar_file, filename = result
+            profile.avatar.save(filename, avatar_file, save=True)
+    """
+    try:
+        # Download image
+        response = requests.get(image_url, timeout=10, stream=True)
+
+        if response.status_code != 200:
+            print(f"Avatar download failed: HTTP {response.status_code}")
+            return None
+
+        # Check content type (should be image)
+        content_type = response.headers.get('Content-Type', '')
+        if not content_type.startswith('image/'):
+            print(f"Invalid content type: {content_type}")
+            return None
+
+        # Generate filename if not provided
+        if not filename:
+            # Try to extract extension from content-type first (most reliable)
+            ext_map = {
+                'image/jpeg': 'jpg',
+                'image/jpg': 'jpg',
+                'image/png': 'png',
+                'image/gif': 'gif',
+                'image/webp': 'webp',
+                'image/bmp': 'bmp',
+            }
+
+            # Get extension from content-type
+            ext = ext_map.get(content_type.lower(), None)
+
+            # If not found in content-type, try URL
+            if not ext:
+                # Extract extension from URL (only if valid)
+                url_parts = image_url.split('?')[0]  # Remove query params
+                if '.' in url_parts:
+                    potential_ext = url_parts.split('.')[-1].lower()
+                    # Only use if it's a valid image extension (2-4 chars, alphanumeric)
+                    if potential_ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'] and len(potential_ext) <= 4:
+                        ext = potential_ext
+
+            # Final fallback
+            if not ext:
+                ext = 'jpg'
+
+            # Create unique filename
+            if user_id:
+                filename = f'user_{user_id}_avatar.{ext}'
+            else:
+                # Fallback with timestamp if no user_id
+                import time
+                timestamp = int(time.time())
+                filename = f'avatar_{timestamp}.{ext}'
+
+        # Create ContentFile from response content
+        content_file = ContentFile(response.content)
+
+        return content_file, filename
+
+    except requests.RequestException as e:
+        print(f"Avatar download error: {e}")
+        return None
+    except Exception as e:
+        print(f"Unexpected avatar download error: {e}")
+        return None
 
 
 class BaseSocialAuth:
@@ -65,16 +151,17 @@ class BaseSocialAuth:
     def extract_user_data(self, raw_data):
         """
         Provider'dan gelen raw data'yı standart formata çevir
-        
+
         Args:
             raw_data (dict): Provider'dan gelen raw data
-            
+
         Returns:
             dict: Standartlaştırılmış user data
                 {
                     'email': str,
                     'first_name': str,
                     'last_name': str,
+                    'avatar_url': str (optional),
                 }
         """
         # Default implementation - subclass override edebilir
@@ -82,6 +169,7 @@ class BaseSocialAuth:
             'email': raw_data.get('email'),
             'first_name': raw_data.get('given_name', raw_data.get('first_name', '')),
             'last_name': raw_data.get('family_name', raw_data.get('last_name', '')),
+            'avatar_url': raw_data.get('picture'),  # Google ve Facebook'ta 'picture' field'ı var
         }
     
     def generate_unique_username(self, email):
@@ -187,29 +275,37 @@ class BaseSocialAuth:
                 user.save()
 
             # Profile bilgilerini güncelle (eğer boş ise)
-            try:
-                profile = user.profile
-                profile_updated = False
+            # Signal otomatik oluşturmuş olmalı, ama yine de get_or_create kullan
+            profile, created = Profile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'first_name': user_data.get('first_name', ''),
+                    'last_name': user_data.get('last_name', ''),
+                    'bio': f'{self.provider_name.capitalize()} ile katıldı'
+                }
+            )
 
-                if not profile.first_name and user_data.get('first_name'):
-                    profile.first_name = user_data['first_name']
+            profile_updated = False
+
+            # Mevcut profile'ı güncelle (boşsa)
+            if not profile.first_name and user_data.get('first_name'):
+                profile.first_name = user_data['first_name']
+                profile_updated = True
+
+            if not profile.last_name and user_data.get('last_name'):
+                profile.last_name = user_data['last_name']
+                profile_updated = True
+
+            # Avatar yoksa ve URL varsa download et
+            if not profile.avatar and user_data.get('avatar_url'):
+                result = download_avatar_from_url(user_data['avatar_url'], user_id=user.id)
+                if result:
+                    avatar_file, filename = result
+                    profile.avatar.save(filename, avatar_file, save=False)
                     profile_updated = True
 
-                if not profile.last_name and user_data.get('last_name'):
-                    profile.last_name = user_data['last_name']
-                    profile_updated = True
-
-                if profile_updated:
-                    profile.save()
-
-            except Profile.DoesNotExist:
-                # Profile yoksa oluştur
-                Profile.objects.create(
-                    user=user,
-                    first_name=user_data.get('first_name', ''),
-                    last_name=user_data.get('last_name', ''),
-                    bio=f'{self.provider_name.capitalize()} ile katıldı'
-                )
+            if profile_updated:
+                profile.save()
 
             return user
             
@@ -230,19 +326,41 @@ class BaseSocialAuth:
     
     def create_profile(self, user, user_data=None):
         """
-        Yeni kullanıcı için profile oluştur
+        Yeni kullanıcı için profile oluştur veya güncelle
+
+        Note: Signal tarafından otomatik oluşturulan profile'ı günceller
+        veya yoksa oluşturur.
 
         Args:
             user (User): Django User instance
-            user_data (dict, optional): User data with first_name and last_name
+            user_data (dict, optional): User data with first_name, last_name, and avatar_url
         """
         try:
-            Profile.objects.create(
+            # get_or_create kullan - signal zaten oluşturmuş olabilir
+            profile, created = Profile.objects.get_or_create(
                 user=user,
-                first_name=user_data.get('first_name', '') if user_data else '',
-                last_name=user_data.get('last_name', '') if user_data else '',
-                bio=f'{self.provider_name.capitalize()} ile katıldı'
+                defaults={
+                    'first_name': user_data.get('first_name', '') if user_data else '',
+                    'last_name': user_data.get('last_name', '') if user_data else '',
+                    'bio': f'{self.provider_name.capitalize()} ile katıldı'
+                }
             )
+
+            # Eğer zaten varsa (signal oluşturmuşsa), bilgileri güncelle
+            if not created:
+                profile.first_name = user_data.get('first_name', '') if user_data else ''
+                profile.last_name = user_data.get('last_name', '') if user_data else ''
+                if not profile.bio:
+                    profile.bio = f'{self.provider_name.capitalize()} ile katıldı'
+                profile.save()
+
+            # Avatar varsa download et
+            if user_data and user_data.get('avatar_url') and not profile.avatar:
+                result = download_avatar_from_url(user_data['avatar_url'], user_id=user.id)
+                if result:
+                    avatar_file, filename = result
+                    profile.avatar.save(filename, avatar_file, save=True)
+
         except Exception as e:
             # Profile oluşturulamasa bile kullanıcı oluşturma devam etsin
             print(f"{self.provider_name} - Profile oluşturma hatası: {e}")
@@ -398,7 +516,7 @@ class FacebookAuth(BaseSocialAuth):
             self.user_info_url,
             params={
                 'access_token': access_token,
-                'fields': 'id,email,first_name,last_name,picture'
+                'fields': 'id,email,first_name,last_name,picture.type(large)'
             },
             timeout=10
         )
@@ -417,20 +535,33 @@ class FacebookAuth(BaseSocialAuth):
     def extract_user_data(self, raw_data):
         """
         Facebook'un response formatı biraz farklı, override ediyoruz
-        
+
         Facebook response:
         {
             "id": "123456789",
             "email": "user@example.com",
             "first_name": "John",
             "last_name": "Doe",
-            "picture": {...}
+            "picture": {
+                "data": {
+                    "url": "https://..."
+                }
+            }
         }
         """
+        # Extract avatar URL from nested structure
+        avatar_url = None
+        picture = raw_data.get('picture', {})
+        if isinstance(picture, dict):
+            picture_data = picture.get('data', {})
+            if isinstance(picture_data, dict):
+                avatar_url = picture_data.get('url')
+
         return {
             'email': raw_data.get('email'),
             'first_name': raw_data.get('first_name', ''),
             'last_name': raw_data.get('last_name', ''),
+            'avatar_url': avatar_url,
         }
 
 

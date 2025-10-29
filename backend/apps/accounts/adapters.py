@@ -67,26 +67,73 @@ class CustomSocialAccountAdapter(DefaultSocialAccountAdapter):
         user.save()
 
         # Profile oluştur veya güncelle
+        # Signal otomatik oluşturmuş olmalı, ama yine de get_or_create kullan
         from accounts.models import Profile
-        try:
-            profile = user.profile
-            # Mevcut profile'ı güncelle (boşsa)
-            if not profile.first_name:
-                profile.first_name = extra_data.get('given_name', '') or extra_data.get('first_name', '')
-            if not profile.last_name:
-                profile.last_name = extra_data.get('family_name', '') or extra_data.get('last_name', '')
+        from accounts.social_auth import download_avatar_from_url
+
+        profile, created = Profile.objects.get_or_create(
+            user=user,
+            defaults={
+                'first_name': extra_data.get('given_name', '') or extra_data.get('first_name', ''),
+                'last_name': extra_data.get('family_name', '') or extra_data.get('last_name', ''),
+                'bio': f"Joined via {sociallogin.account.provider.title()}",
+            }
+        )
+
+        profile_updated = False
+
+        # Mevcut profile'ı güncelle (boşsa)
+        if not profile.first_name:
+            profile.first_name = extra_data.get('given_name', '') or extra_data.get('first_name', '')
+            profile_updated = True
+        if not profile.last_name:
+            profile.last_name = extra_data.get('family_name', '') or extra_data.get('last_name', '')
+            profile_updated = True
+
+        # Avatar yoksa ve provider'dan geliyorsa download et
+        if not profile.avatar:
+            avatar_url = self._get_avatar_url(sociallogin.account.provider, extra_data)
+            if avatar_url:
+                result = download_avatar_from_url(avatar_url, user_id=user.id)
+                if result:
+                    avatar_file, filename = result
+                    profile.avatar.save(filename, avatar_file, save=False)
+                    profile_updated = True
+
+        if profile_updated:
             profile.save()
-        except Profile.DoesNotExist:
-            # Yeni profile oluştur
-            Profile.objects.create(
-                user=user,
-                first_name=extra_data.get('given_name', '') or extra_data.get('first_name', ''),
-                last_name=extra_data.get('family_name', '') or extra_data.get('last_name', ''),
-                bio=f"Joined via {sociallogin.account.provider.title()}",
-            )
         
         return user
     
+    def _get_avatar_url(self, provider, extra_data):
+        """
+        Provider'a göre avatar URL'ini al
+
+        Args:
+            provider (str): Provider name (google, facebook, apple)
+            extra_data (dict): Provider'dan gelen extra data
+
+        Returns:
+            str: Avatar URL or None
+        """
+        if provider == 'google':
+            # Google: picture field directly contains URL
+            return extra_data.get('picture')
+
+        elif provider == 'facebook':
+            # Facebook: picture.data.url nested structure
+            picture = extra_data.get('picture', {})
+            if isinstance(picture, dict):
+                picture_data = picture.get('data', {})
+                if isinstance(picture_data, dict):
+                    return picture_data.get('url')
+
+        elif provider == 'apple':
+            # Apple doesn't provide avatar in standard flow
+            return None
+
+        return None
+
     def populate_user(self, request, sociallogin, data):
         """
         User object'ini social login verisiyle doldur

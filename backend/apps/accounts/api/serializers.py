@@ -382,10 +382,8 @@ class ProfileUpdateSerializer(serializers.Serializer):
             raise serializers.ValidationError('User not provided')
 
         from accounts.models import Profile
-        try:
-            profile = self.user.profile
-        except Profile.DoesNotExist:
-            profile = Profile.objects.create(user=self.user)
+        # Signal should have created profile, but use get_or_create to be safe
+        profile, created = Profile.objects.get_or_create(user=self.user)
 
         # Update profile fields
         if 'first_name' in self.validated_data:

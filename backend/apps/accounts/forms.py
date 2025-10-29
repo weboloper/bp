@@ -376,12 +376,8 @@ class ProfileUpdateForm(forms.ModelForm):
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
-        # Get or create profile
-        try:
-            profile = user.profile
-        except Profile.DoesNotExist:
-            profile = Profile.objects.create(user=user)
-
+        # Get or create profile (signal should have created it, but use get_or_create to be safe)
+        profile, created = Profile.objects.get_or_create(user=user)
         super().__init__(instance=profile, *args, **kwargs)
 
     def clean_first_name(self):

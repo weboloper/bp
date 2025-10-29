@@ -481,16 +481,15 @@ def profile_update_view(request):
     if not request.user.is_authenticated:
         return redirect('accounts:login')
     
-    # Get or create profile
-    try:
-        profile = request.user.profile
-    except Profile.DoesNotExist:
-        profile = Profile.objects.create(
-            user=request.user,
-            birth_date=None,
-            bio='',
-            avatar=None
-        )
+    # Get or create profile (signal should have created it, but use get_or_create to be safe)
+    profile, created = Profile.objects.get_or_create(
+        user=request.user,
+        defaults={
+            'birth_date': None,
+            'bio': '',
+            'avatar': None
+        }
+    )
     
     if request.method == 'POST':
         user_form = ProfileUpdateForm(request.user, request.POST)
