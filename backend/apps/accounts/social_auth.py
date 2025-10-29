@@ -281,7 +281,7 @@ class BaseSocialAuth:
                 defaults={
                     'first_name': user_data.get('first_name', ''),
                     'last_name': user_data.get('last_name', ''),
-                    'bio': f'{self.provider_name.capitalize()} ile katıldı'
+                    'bio': ''
                 }
             )
 
@@ -342,7 +342,7 @@ class BaseSocialAuth:
                 defaults={
                     'first_name': user_data.get('first_name', '') if user_data else '',
                     'last_name': user_data.get('last_name', '') if user_data else '',
-                    'bio': f'{self.provider_name.capitalize()} ile katıldı'
+                    'bio': ''
                 }
             )
 
@@ -351,7 +351,7 @@ class BaseSocialAuth:
                 profile.first_name = user_data.get('first_name', '') if user_data else ''
                 profile.last_name = user_data.get('last_name', '') if user_data else ''
                 if not profile.bio:
-                    profile.bio = f'{self.provider_name.capitalize()} ile katıldı'
+                    profile.bio = ''
                 profile.save()
 
             # Avatar varsa download et
