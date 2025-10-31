@@ -784,38 +784,3 @@ class AppleAuth(BaseSocialAuth):
             'first_name': '',  # Apple token içinde isim yok
             'last_name': '',   # Ayrı 'user' JSON'unda gelir (ilk login)
         }
-
-
-# Helper function - view'larda kullanmak için
-def get_social_auth_provider(provider_name):
-    """
-    Provider ismine göre authentication class'ı döndür
-    
-    Args:
-        provider_name (str): 'google', 'facebook', 'apple'
-        
-    Returns:
-        BaseSocialAuth: Authentication class instance
-        
-    Raises:
-        ValueError: Geçersiz provider ismi
-        
-    Usage:
-        auth_provider = get_social_auth_provider('google')
-        user = auth_provider.authenticate(access_token)
-    """
-    providers = {
-        'google': GoogleAuth,
-        'facebook': FacebookAuth,
-        'apple': AppleAuth,
-    }
-    
-    provider_class = providers.get(provider_name.lower())
-    
-    if not provider_class:
-        raise ValueError(
-            f"Geçersiz provider: {provider_name}. "
-            f"Geçerli provider'lar: {', '.join(providers.keys())}"
-        )
-    
-    return provider_class()
