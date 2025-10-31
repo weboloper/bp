@@ -332,24 +332,53 @@ def email_verification_resend_view(request):
     
     return render(request, 'accounts/public/email_verification_resend.html')
 
-def password_change_view(request):
+def password_set_view(request):
     """
-    Login olan kullanıcının şifre değiştirme/oluşturma formu
-
-    - Sosyal medya ile giriş yapanlar: PasswordSetForm (current password gerektirmez)
-    - Normal kullanıcılar: PasswordChangeForm (current password gerektirir)
+    Social login ile giriş yapan kullanıcılar için şifre belirleme formu.
+    Eğer kullanıcının zaten şifresi varsa, profile sayfasına yönlendirilir.
     """
     if not request.user.is_authenticated:
         return redirect('accounts:login')
 
-    # Kullanıcının password'ü var mı kontrol et
-    has_password = request.user.has_usable_password()
-
-    # Sosyal medya kullanıcısı için farklı form
-    FormClass = PasswordChangeForm if has_password else PasswordSetForm
+    # Eğer kullanıcının zaten şifresi varsa, profile sayfasına yönlendir
+    if request.user.has_usable_password():
+        # messages.info(request, 'Zaten bir şifreniz var. Şifrenizi değiştirmek için şifre değiştirme sayfasını kullanın.')
+        return redirect('accounts:profile')
 
     if request.method == 'POST':
-        form = FormClass(request.user, request.POST)
+        form = PasswordSetForm(request.user, request.POST)
+
+        if form.is_valid():
+            form.save()
+
+            # Update session to keep user logged in after password set
+            from django.contrib.auth import update_session_auth_hash
+            update_session_auth_hash(request, request.user)
+
+            messages.success(request, 'Şifreniz başarıyla oluşturuldu.')
+            return redirect('accounts:profile')
+
+        return render(request, 'accounts/private/password_set.html', {
+            'errors': form.errors
+        })
+
+    return render(request, 'accounts/private/password_set.html')
+
+def password_change_view(request):
+    """
+    Login olan kullanıcının şifre değiştirme formu
+    Eğer kullanıcının şifresi yoksa, password-set sayfasına yönlendirilir.
+    """
+    if not request.user.is_authenticated:
+        return redirect('accounts:login')
+
+    # Eğer kullanıcının şifresi yoksa, password-set sayfasına yönlendir
+    if not request.user.has_usable_password():
+        messages.info(request, 'Önce bir şifre oluşturmalısınız.')
+        return redirect('accounts:password_set')
+
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
 
         if form.is_valid():
             form.save()
@@ -358,28 +387,25 @@ def password_change_view(request):
             from django.contrib.auth import update_session_auth_hash
             update_session_auth_hash(request, request.user)
 
-            # Sosyal medya kullanıcısı ilk defa password oluşturduysa
-            success_message = 'Şifreniz başarıyla oluşturuldu.' if not has_password else 'Şifreniz başarıyla değiştirildi.'
-            messages.success(request, success_message)
+            messages.success(request, 'Şifreniz başarıyla değiştirildi.')
             return redirect('accounts:profile')
 
         return render(request, 'accounts/private/password_change.html', {
-            'form': form,
-            'errors': form.errors,
-            'has_password': has_password
+            'errors': form.errors
         })
 
-    form = FormClass(request.user)
-    return render(request, 'accounts/private/password_change.html', {
-        'form': form,
-        'has_password': has_password
-    })
+    return render(request, 'accounts/private/password_change.html')
 
 def email_change_view(request):
     """Login olan kullanıcının email değiştirme formu"""
     if not request.user.is_authenticated:
         return redirect('accounts:login')
-    
+
+    # Eğer kullanıcının şifresi yoksa, password-set sayfasına yönlendir
+    if not request.user.has_usable_password():
+        messages.info(request, 'Email değiştirmek için önce bir şifre oluşturmalısınız.')
+        return redirect('accounts:password_set')
+
     if request.method == 'POST':
         form = EmailChangeForm(request.user, request.POST)
         
@@ -514,7 +540,12 @@ def username_change_view(request):
     """Kullanıcı adı değiştirme formu"""
     if not request.user.is_authenticated:
         return redirect('accounts:login')
-    
+
+    # Eğer kullanıcının şifresi yoksa, password-set sayfasına yönlendir
+    if not request.user.has_usable_password():
+        messages.info(request, 'Kullanıcı adı değiştirmek için önce bir şifre oluşturmalısınız.')
+        return redirect('accounts:password_set')
+
     if request.method == 'POST':
         form = UsernameChangeForm(request.user, request.POST)
         

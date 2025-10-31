@@ -4,13 +4,14 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView
 )
 from .views import (
-    CustomTokenObtainPairView, 
-    MeAPIView, 
+    CustomTokenObtainPairView,
+    MeAPIView,
     RegisterAPIView,
     PasswordResetAPIView,
     PasswordResetConfirmAPIView,
     EmailVerificationResendAPIView,
     EmailVerificationConfirmAPIView,
+    PasswordSetAPIView,
     PasswordChangeAPIView,
     EmailChangeAPIView,
     EmailChangeConfirmAPIView,
@@ -43,8 +44,9 @@ urlpatterns = [
     # Email verification endpoints
     path('auth/email-verify-resend/', EmailVerificationResendAPIView.as_view(), name='email_verification_resend'),
     path('auth/email-verify/<uidb64>/<token>/', EmailVerificationConfirmAPIView.as_view(), name='email_verification_confirm'),
-    
-    # Password change endpoint (authenticated)
+
+    # Password set & change endpoints (authenticated)
+    path('auth/password-set/', PasswordSetAPIView.as_view(), name='password_set'),
     path('auth/password-change/', PasswordChangeAPIView.as_view(), name='password_change'),
     
     # Email change endpoints (authenticated)

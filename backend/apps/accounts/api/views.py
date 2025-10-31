@@ -256,11 +256,18 @@ class UsernameChangeAPIView(APIView):
     Rate limited: 5 requests per hour per user or IP
     """
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         """
         Change username with current password verification
         """
+        # Check if user has a password
+        if not request.user.has_usable_password():
+            return Response(
+                {'detail': 'Kullanıcı adı değiştirmek için önce bir şifre oluşturmalısınız. password-set endpoint kullanın.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = UsernameChangeSerializer(data=request.data, user=request.user)
         
         if serializer.is_valid():
@@ -391,51 +398,83 @@ class PasswordResetConfirmAPIView(APIView):
 
 
 @method_decorator(ratelimit(key='user', rate='10/h', method='POST'), name='post')
-class PasswordChangeAPIView(APIView):
+class PasswordSetAPIView(APIView):
     """
-    Password change/set endpoint for authenticated users
-
-    - Users with existing password: requires current_password
-    - Social login users (no password): does not require current_password
-
+    Password set endpoint for authenticated users without password (social login users)
     Rate limited: 10 requests per hour per user
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """
-        Change or set user password
-
-        Automatically selects the appropriate serializer based on whether
-        the user has an existing password.
+        Set password for social login users
         """
-        # Check if user has usable password
-        has_password = request.user.has_usable_password()
+        # Check if user already has a password
+        if request.user.has_usable_password():
+            return Response(
+                {'detail': 'Zaten bir şifreniz var. Şifrenizi değiştirmek için password-change endpoint kullanın.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        # Select appropriate serializer
-        SerializerClass = PasswordChangeSerializer if has_password else PasswordSetSerializer
-
-        serializer = SerializerClass(data=request.data, user=request.user)
+        serializer = PasswordSetSerializer(data=request.data, user=request.user)
 
         if serializer.is_valid():
             try:
                 # Save new password
                 serializer.save()
 
-                # Different message based on whether setting or changing
-                success_message = 'Şifreniz başarıyla değiştirildi' if has_password else 'Şifreniz başarıyla oluşturuldu'
-
                 return Response(
                     {
-                        'detail': success_message,
-                        'has_password': True  # User now has a password
+                        'detail': 'Şifreniz başarıyla oluşturuldu',
+                        'has_password': True
                     },
                     status=status.HTTP_200_OK
                 )
 
             except Exception as e:
                 return Response(
-                    {'detail': 'Şifre işlemi sırasında hata oluştu'},
+                    {'detail': 'Şifre oluşturma sırasında hata oluştu'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        # Return validation errors - DRF default format
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(ratelimit(key='user', rate='10/h', method='POST'), name='post')
+class PasswordChangeAPIView(APIView):
+    """
+    Password change endpoint for authenticated users with existing password
+    Rate limited: 10 requests per hour per user
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Change user password
+        """
+        # Check if user has a password
+        if not request.user.has_usable_password():
+            return Response(
+                {'detail': 'Önce bir şifre oluşturmalısınız. password-set endpoint kullanın.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer = PasswordChangeSerializer(data=request.data, user=request.user)
+
+        if serializer.is_valid():
+            try:
+                # Save new password
+                serializer.save()
+
+                return Response(
+                    {'detail': 'Şifreniz başarıyla değiştirildi'},
+                    status=status.HTTP_200_OK
+                )
+
+            except Exception as e:
+                return Response(
+                    {'detail': 'Şifre değiştirme sırasında hata oluştu'},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
@@ -450,11 +489,18 @@ class EmailChangeAPIView(APIView):
     Rate limited: 3 requests per hour per user
     """
     permission_classes = [IsAuthenticated]
-    
+
     def post(self, request):
         """
         Request email change - sends confirmation to new email
         """
+        # Check if user has a password
+        if not request.user.has_usable_password():
+            return Response(
+                {'detail': 'Email değiştirmek için önce bir şifre oluşturmalısınız. password-set endpoint kullanın.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         serializer = EmailChangeSerializer(data=request.data, user=request.user)
         
         if serializer.is_valid():
