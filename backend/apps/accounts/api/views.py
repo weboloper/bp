@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from core.email_service import EmailService
+
 from .serializers import (
     CustomTokenObtainPairSerializer,
     UserRegistrationSerializer,
@@ -721,22 +722,16 @@ class MeAPIView(APIView):
         Get current user profile
         """
         user = request.user
-
         # Get or create profile if it doesn't exist
         profile_data = None
-        first_name = ''
-        last_name = ''
         if hasattr(user, 'profile'):
             profile = user.profile
-            first_name = profile.first_name
-            last_name = profile.last_name
             profile_data = {
                 'first_name': profile.first_name,
                 'last_name': profile.last_name,
                 'birth_date': profile.birth_date,
                 'bio': profile.bio,
                 'avatar': profile.avatar.url if profile.avatar else None,
-                'created_at': profile.created_at,
                 'updated_at': profile.updated_at,
             }
 
@@ -744,8 +739,6 @@ class MeAPIView(APIView):
             'id': user.id,
             'username': user.username,
             'email': user.email,
-            'first_name': first_name,
-            'last_name': last_name,
             'is_active': user.is_active,
             'is_verified': user.is_verified,
             'has_password': user.has_usable_password(),
@@ -783,7 +776,6 @@ class MeAPIView(APIView):
                         'birth_date': profile.birth_date,
                         'bio': profile.bio,
                         'avatar': profile.avatar.url if profile.avatar else None,
-                        'created_at': profile.created_at,
                         'updated_at': profile.updated_at,
                     }
 

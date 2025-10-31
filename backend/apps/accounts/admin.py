@@ -93,20 +93,19 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'first_name', 'last_name', 'birth_date', 'created_at')
-    list_filter = ('created_at', 'updated_at')
+    list_display = ('user', 'first_name', 'last_name', 'birth_date')
+    list_filter = ('updated_at',)
     search_fields = ('user__username', 'user__email', 'first_name', 'last_name', 'bio')
-    ordering = ('-created_at',)
     
     fieldsets = (
         (_('Temel Bilgiler'), {
             'fields': ('user', 'first_name', 'last_name', 'birth_date', 'bio', 'avatar')
         }),
         (_('Tarihler'), {
-            'fields': ('created_at', 'updated_at'),
+            'fields': ('updated_at',),
             'classes': ('collapse',)
         }),
     )
     
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('updated_at',)
     raw_id_fields = ('user',)

@@ -6,6 +6,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
 from accounts.utils import validate_alphanumeric_username
+from django.contrib.auth.models import update_last_login
 
 # Social Login Serializers - Refactored with BaseSocialAuth
 from accounts.api.social_serializers import (
@@ -267,6 +268,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not user.is_verified:
             raise serializers.ValidationError('Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
         
+        update_last_login(None, user)  # last_login güncelle
         refresh = self.get_token(user)
         
         data = {

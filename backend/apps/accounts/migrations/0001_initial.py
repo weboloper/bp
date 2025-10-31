@@ -114,7 +114,6 @@ class Migration(migrations.Migration):
                         validators=[accounts.utils.validate_image_extension],
                     ),
                 ),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
                 (
                     "user",
