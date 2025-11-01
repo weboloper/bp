@@ -447,16 +447,49 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class EmailVerificationResendSerializer(serializers.Serializer):
     """Email verification resend serializer"""
     email = serializers.EmailField(required=True)
-    
+
     def validate_email(self, value):
         email = value.strip()
         if not email:
             raise serializers.ValidationError('Email adresi gerekli')
         return email
-    
+
     def get_user(self):
         email = self.validated_data.get('email')
         try:
             return User.objects.get(email=email)
         except User.DoesNotExist:
             return None
+
+
+class UserProfileSerializer(serializers.Serializer):
+    """User profile serializer for returning profile data"""
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    birth_date = serializers.DateField()
+    bio = serializers.CharField()
+    avatar = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField()
+
+    def get_avatar(self, obj):
+        """Return full URL for avatar"""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            # Fallback to just the URL if request is not available
+            return obj.avatar.url
+        return None
+
+
+class MeSerializer(serializers.Serializer):
+    """Me endpoint serializer for current user data"""
+    id = serializers.IntegerField()
+    username = serializers.CharField()
+    email = serializers.EmailField()
+    is_active = serializers.BooleanField()
+    is_verified = serializers.BooleanField()
+    has_password = serializers.BooleanField()
+    date_joined = serializers.DateTimeField()
+    last_login = serializers.DateTimeField()
+    profile = UserProfileSerializer()

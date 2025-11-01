@@ -25,7 +25,9 @@ from .serializers import (
     UsernameChangeSerializer,
     GoogleSocialLoginSerializer,
     FacebookSocialLoginSerializer,
-    AppleSocialLoginSerializer
+    AppleSocialLoginSerializer,
+    MeSerializer,
+    UserProfileSerializer
 )
 
 User = get_user_model()
@@ -768,19 +770,8 @@ class MeAPIView(APIView):
         Get current user profile
         """
         user = request.user
-        # Get or create profile if it doesn't exist
-        profile_data = None
-        if hasattr(user, 'profile'):
-            profile = user.profile
-            profile_data = {
-                'first_name': profile.first_name,
-                'last_name': profile.last_name,
-                'birth_date': profile.birth_date,
-                'bio': profile.bio,
-                'avatar': profile.avatar.url if profile.avatar else None,
-                'updated_at': profile.updated_at,
-            }
 
+        # Prepare data for serializer
         data = {
             'id': user.id,
             'username': user.username,
@@ -790,10 +781,13 @@ class MeAPIView(APIView):
             'has_password': user.has_usable_password(),
             'date_joined': user.date_joined,
             'last_login': user.last_login,
-            'profile': profile_data
+            'profile': user.profile if hasattr(user, 'profile') else None
         }
 
-        return Response(data, status=status.HTTP_200_OK)
+        # Serialize with request context for full URLs
+        serializer = MeSerializer(data, context={'request': request})
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
     
     @method_decorator(ratelimit(key='user', rate='20/h', method='PATCH'))
     def patch(self, request):
@@ -808,22 +802,19 @@ class MeAPIView(APIView):
                 # Save updated profile
                 user = serializer.save()
 
-                # Return updated profile data
-                profile_data = None
-                first_name = ''
-                last_name = ''
+                # Prepare data for response serializer
+                profile_data = {
+                    'first_name': user.profile.first_name if hasattr(user, 'profile') else '',
+                    'last_name': user.profile.last_name if hasattr(user, 'profile') else ''
+                }
+
+                # Get full profile serialized with avatar URL
+                profile_serializer = None
                 if hasattr(user, 'profile'):
-                    profile = user.profile
-                    first_name = profile.first_name
-                    last_name = profile.last_name
-                    profile_data = {
-                        'first_name': profile.first_name,
-                        'last_name': profile.last_name,
-                        'birth_date': profile.birth_date,
-                        'bio': profile.bio,
-                        'avatar': profile.avatar.url if profile.avatar else None,
-                        'updated_at': profile.updated_at,
-                    }
+                    profile_serializer = UserProfileSerializer(
+                        user.profile,
+                        context={'request': request}
+                    )
 
                 return Response({
                     'detail': 'Profiliniz başarıyla güncellendi.',
@@ -831,9 +822,9 @@ class MeAPIView(APIView):
                         'id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'first_name': first_name,
-                        'last_name': last_name,
-                        'profile': profile_data
+                        'first_name': profile_data['first_name'],
+                        'last_name': profile_data['last_name'],
+                        'profile': profile_serializer.data if profile_serializer else None
                     }
                 }, status=status.HTTP_200_OK)
 
