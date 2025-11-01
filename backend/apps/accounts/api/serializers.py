@@ -265,8 +265,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         if not user.is_active:
             raise serializers.ValidationError('Hesabınız devre dışı bırakılmış')
         
-        if not user.is_verified:
-            raise serializers.ValidationError('Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
+        # if not user.is_verified:
+        #     raise serializers.ValidationError('Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
         
         update_last_login(None, user)  # last_login güncelle
         refresh = self.get_token(user)

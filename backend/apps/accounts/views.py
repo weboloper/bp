@@ -105,13 +105,13 @@ def login_view(request):
             # Check authentication result
             if user is not None:
                 if user.is_active:
-                    if not user.is_verified:
-                        messages.warning(request, 'Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
-                        return render(request, 'accounts/public/login.html', {
-                            'errors': {},
-                            'username': username,
-                            'show_verification_link': True
-                        })
+                    # if not user.is_verified:
+                    #     messages.warning(request, 'Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
+                    #     return render(request, 'accounts/public/login.html', {
+                    #         'errors': {},
+                    #         'username': username,
+                    #         'show_verification_link': True
+                    #     })
                     
                     login(request, user)
                     messages.success(request, f'Hoş geldin {user.username}!')
