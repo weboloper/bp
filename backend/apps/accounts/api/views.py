@@ -619,7 +619,7 @@ class EmailChangeConfirmAPIView(APIView):
             )
 
 
-# @method_decorator(ratelimit(key='ip', rate='5/h', method='POST'), name='post')
+@method_decorator(ratelimit(key='ip', rate='5/h', method='POST'), name='post')
 class EmailVerificationRequestAPIView(APIView):
     """
     Email verification resend endpoint
