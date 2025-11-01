@@ -10,13 +10,13 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile'),
 
     # password urls
-    path('password-reset/', views.password_reset_view, name='password_reset'),
+    path('password-reset-request/', views.password_reset_request_view, name='password_reset_request'),
     path('password-reset-confirm/<uidb64>/<token>/', views.password_reset_confirm_view, name='password_reset_confirm'),
 
     # email verification urls
-    path('email-verify/<uidb64>/<token>/', views.email_verification_confirm_view, name='email_verification_confirm'),
-    path('email-verify-resend/', views.email_verification_resend_view, name='email_verification_resend'),
-
+    path('email-verification-request/', views.email_verification_request_view, name='email_verification_request'),
+    path('email-verification-confirm/<uidb64>/<token>/', views.email_verification_confirm_view, name='email_verification_confirm'),
+    
     # password set & change urls
     path('password-set/', views.password_set_view, name='password_set'),
     path('password-change/', views.password_change_view, name='password_change'),

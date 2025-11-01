@@ -294,7 +294,7 @@ class UsernameChangeAPIView(APIView):
 
 
 @method_decorator(ratelimit(key='ip', rate='3/h', method='POST'), name='post')
-class PasswordResetAPIView(APIView):
+class PasswordResetRequestAPIView(APIView):
     """
     Password reset request endpoint
     Rate limited: 3 requests per hour per IP (security)
@@ -619,8 +619,8 @@ class EmailChangeConfirmAPIView(APIView):
             )
 
 
-@method_decorator(ratelimit(key='ip', rate='5/h', method='POST'), name='post')
-class EmailVerificationResendAPIView(APIView):
+# @method_decorator(ratelimit(key='ip', rate='5/h', method='POST'), name='post')
+class EmailVerificationRequestAPIView(APIView):
     """
     Email verification resend endpoint
     Rate limited: 5 requests per hour per IP
@@ -640,7 +640,7 @@ class EmailVerificationResendAPIView(APIView):
                 if user.is_verified:
                     return Response(
                         {'detail': 'Bu email adresi zaten doğrulanmış'}, 
-                        status=status.HTTP_200_OK
+                        status=status.HTTP_400_BAD_REQUEST
                     )
                 
                 # Generate verification token
@@ -648,7 +648,7 @@ class EmailVerificationResendAPIView(APIView):
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
                 # Create verification link
-                verification_link = f"{settings.FRONTEND_URL}/accounts/email-verify/{uid}/{token}/"
+                verification_link = f"{settings.FRONTEND_URL}/accounts/email-verification-confirm/{uid}/{token}/"
                 
                 # Send verification email
                 try:

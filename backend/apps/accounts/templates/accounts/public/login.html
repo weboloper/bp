@@ -12,7 +12,7 @@
 {% if show_verification_link %}
     <div class="alert alert-warning py-2">
         <small>Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin veya 
-        <a href="{% url 'accounts:email_verification_resend' %}" class="alert-link">yeniden gönder</a>.</small>
+        <a href="{% url 'accounts:email_verification_request' %}" class="alert-link">yeniden gönder</a>.</small>
     </div>
 {% endif %}
 
@@ -58,7 +58,7 @@
 <div class="text-center small mb-3">
     <a href="{% url 'accounts:register' %}">Hesabın yok mu? Kayıt ol</a>
     <span class="text-muted mx-1">·</span>
-    <a href="{% url 'accounts:password_reset' %}">Şifremi unuttum</a>
+    <a href="{% url 'accounts:password_reset_request' %}">Şifremi unuttum</a>
 </div>
 
 <hr class="my-3">

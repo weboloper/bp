@@ -7,9 +7,9 @@ from .views import (
     CustomTokenObtainPairView,
     MeAPIView,
     RegisterAPIView,
-    PasswordResetAPIView,
+    PasswordResetRequestAPIView,
     PasswordResetConfirmAPIView,
-    EmailVerificationResendAPIView,
+    EmailVerificationRequestAPIView,
     EmailVerificationConfirmAPIView,
     PasswordSetAPIView,
     PasswordChangeAPIView,
@@ -38,12 +38,12 @@ urlpatterns = [
     path('auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     
     # Password reset endpoints
-    path('auth/password-reset/', PasswordResetAPIView.as_view(), name='password_reset'),
+    path('auth/password-reset-request/', PasswordResetRequestAPIView.as_view(), name='password_reset_request'),
     path('auth/password-reset-confirm/<uidb64>/<token>/', PasswordResetConfirmAPIView.as_view(), name='password_reset_confirm'),
     
     # Email verification endpoints
-    path('auth/email-verify-resend/', EmailVerificationResendAPIView.as_view(), name='email_verification_resend'),
-    path('auth/email-verify/<uidb64>/<token>/', EmailVerificationConfirmAPIView.as_view(), name='email_verification_confirm'),
+    path('auth/email-verification-request/', EmailVerificationRequestAPIView.as_view(), name='email_verification_request'),
+    path('auth/email-verification-confirm/<uidb64>/<token>/', EmailVerificationConfirmAPIView.as_view(), name='email_verification_confirm'),
 
     # Password set & change endpoints (authenticated)
     path('auth/password-set/', PasswordSetAPIView.as_view(), name='password_set'),

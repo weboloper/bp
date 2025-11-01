@@ -172,7 +172,7 @@ class PasswordResetConfirmForm(forms.Form):
     
     def save(self):
         """Kullanıcının şifresini güncelle"""
-        password = self.cleaned_data['password1']
+        password = self.cleaned_data['new_password1']
         self.user.set_password(password)
         self.user.save()
         return self.user

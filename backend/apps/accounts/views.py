@@ -153,7 +153,7 @@ def logout_view(request):
     
     return redirect('home')
 
-def password_reset_view(request):
+def password_reset_request_view(request):
     """Şifremi unuttum formu"""
     if request.method == 'POST':
         form = PasswordResetForm(request.POST)
@@ -193,12 +193,12 @@ def password_reset_view(request):
                 messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
                 return redirect('home')
         
-        return render(request, 'accounts/public/password_reset.html', {
+        return render(request, 'accounts/public/password_reset_request.html', {
             'errors': form.errors,
             'email': request.POST.get('email', '')
         })
     
-    return render(request, 'accounts/public/password_reset.html')
+    return render(request, 'accounts/public/password_reset_request.html')
 
 def password_reset_confirm_view(request, uidb64, token):
     """Email'den gelen link ile şifre sıfırlama"""
@@ -281,7 +281,7 @@ def email_verification_confirm_view(request, uidb64, token):
             'validlink': False
         })
 
-def email_verification_resend_view(request):
+def email_verification_request_view(request):
     """Email doğrulama yeniden gönderme formu"""
     if request.method == 'POST':
         form = EmailVerificationResendForm(request.POST)
@@ -299,7 +299,7 @@ def email_verification_resend_view(request):
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
                 # Create verification link
-                verification_link = f"{settings.FRONTEND_URL}/accounts/email-verify/{uid}/{token}/"
+                verification_link = f"{settings.FRONTEND_URL}/accounts/email-verification-confirm/{uid}/{token}/"
                 
                 # Send verification email
                 try:
@@ -325,12 +325,12 @@ def email_verification_resend_view(request):
                 messages.success(request, 'Eğer bu email adresi kayıtlıysa, doğrulama linki gönderildi.')
                 return redirect('accounts:login')
         
-        return render(request, 'accounts/public/email_verification_resend.html', {
+        return render(request, 'accounts/public/email_verification_request.html', {
             'errors': form.errors,
             'email': request.POST.get('email', '')
         })
     
-    return render(request, 'accounts/public/email_verification_resend.html')
+    return render(request, 'accounts/public/email_verification_request.html')
 
 def password_set_view(request):
     """
