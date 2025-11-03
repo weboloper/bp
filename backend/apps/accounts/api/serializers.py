@@ -488,6 +488,7 @@ class MeSerializer(serializers.Serializer):
     username = serializers.CharField()
     email = serializers.EmailField()
     is_active = serializers.BooleanField()
+    is_staff = serializers.BooleanField()
     is_verified = serializers.BooleanField()
     has_password = serializers.BooleanField()
     date_joined = serializers.DateTimeField()

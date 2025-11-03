@@ -12,30 +12,30 @@
     <div class="row">
         <div class="col-md-6 mb-3">
             <label for="first_name" class="form-label small">Ad</label>
-            <input type="text" 
-                   class="form-control {% if user_form.first_name.errors %}is-invalid{% endif %}" 
-                   id="first_name" 
-                   name="first_name" 
-                   value="{{ user_form.first_name.value|default:'' }}" 
+            <input type="text"
+                   class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                   id="first_name"
+                   name="first_name"
+                   value="{{ form.first_name.value|default:'' }}"
                    maxlength="30">
-            {% if user_form.first_name.errors %}
+            {% if form.first_name.errors %}
                 <div class="invalid-feedback">
-                    {% for error in user_form.first_name.errors %}{{ error }}{% endfor %}
+                    {% for error in form.first_name.errors %}{{ error }}{% endfor %}
                 </div>
             {% endif %}
         </div>
 
         <div class="col-md-6 mb-3">
             <label for="last_name" class="form-label small">Soyad</label>
-            <input type="text" 
-                   class="form-control {% if user_form.last_name.errors %}is-invalid{% endif %}" 
-                   id="last_name" 
-                   name="last_name" 
-                   value="{{ user_form.last_name.value|default:'' }}" 
+            <input type="text"
+                   class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                   id="last_name"
+                   name="last_name"
+                   value="{{ form.last_name.value|default:'' }}"
                    maxlength="30">
-            {% if user_form.last_name.errors %}
+            {% if form.last_name.errors %}
                 <div class="invalid-feedback">
-                    {% for error in user_form.last_name.errors %}{{ error }}{% endfor %}
+                    {% for error in form.last_name.errors %}{{ error }}{% endfor %}
                 </div>
             {% endif %}
         </div>
@@ -43,14 +43,14 @@
 
     <div class="mb-4">
         <label for="birth_date" class="form-label small">Doğum Tarihi</label>
-        <input type="date" 
-               class="form-control {% if profile_form.birth_date.errors %}is-invalid{% endif %}" 
-               id="birth_date" 
-               name="birth_date" 
-               value="{{ profile_form.birth_date.value|default:'' }}">
-        {% if profile_form.birth_date.errors %}
+        <input type="date"
+               class="form-control {% if form.birth_date.errors %}is-invalid{% endif %}"
+               id="birth_date"
+               name="birth_date"
+               value="{{ form.birth_date.value|default:'' }}">
+        {% if form.birth_date.errors %}
             <div class="invalid-feedback">
-                {% for error in profile_form.birth_date.errors %}{{ error }}{% endfor %}
+                {% for error in form.birth_date.errors %}{{ error }}{% endfor %}
             </div>
         {% endif %}
     </div>
@@ -66,14 +66,14 @@
                 <img src="{{ user.profile.avatar.url }}" alt="Mevcut Avatar" class="rounded" style="width: 80px; height: 80px; object-fit: cover;">
             </div>
         {% endif %}
-        <input type="file" 
-               class="form-control {% if profile_form.avatar.errors %}is-invalid{% endif %}" 
-               id="avatar" 
-               name="avatar" 
+        <input type="file"
+               class="form-control {% if form.avatar.errors %}is-invalid{% endif %}"
+               id="avatar"
+               name="avatar"
                accept="image/*">
-        {% if profile_form.avatar.errors %}
+        {% if form.avatar.errors %}
             <div class="invalid-feedback">
-                {% for error in profile_form.avatar.errors %}{{ error }}{% endfor %}
+                {% for error in form.avatar.errors %}{{ error }}{% endfor %}
             </div>
         {% endif %}
         <div class="form-text">JPG, PNG formatları desteklenir. Max boyut: 5MB</div>
@@ -81,15 +81,15 @@
 
     <div class="mb-4">
         <label for="bio" class="form-label small">Hakkımda</label>
-        <textarea class="form-control {% if profile_form.bio.errors %}is-invalid{% endif %}" 
-                  id="bio" 
-                  name="bio" 
-                  rows="4" 
-                  maxlength="500" 
-                  placeholder="Kendiniz hakkında kısa bilgi...">{{ profile_form.bio.value|default:'' }}</textarea>
-        {% if profile_form.bio.errors %}
+        <textarea class="form-control {% if form.bio.errors %}is-invalid{% endif %}"
+                  id="bio"
+                  name="bio"
+                  rows="4"
+                  maxlength="500"
+                  placeholder="Kendiniz hakkında kısa bilgi...">{{ form.bio.value|default:'' }}</textarea>
+        {% if form.bio.errors %}
             <div class="invalid-feedback">
-                {% for error in profile_form.bio.errors %}{{ error }}{% endfor %}
+                {% for error in form.bio.errors %}{{ error }}{% endfor %}
             </div>
         {% endif %}
         <div class="form-text">Maksimum 500 karakter</div>

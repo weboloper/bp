@@ -8,7 +8,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from accounts.models import User, Profile
 from accounts.utils import validate_alphanumeric_username
-from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordSetForm, PasswordChangeForm, EmailChangeForm, ProfileUpdateForm, ProfileDetailsForm, UsernameChangeForm
+from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordSetForm, PasswordChangeForm, EmailChangeForm, ProfileUpdateForm, UsernameChangeForm
 from core.email_service import EmailService
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -553,34 +553,20 @@ def profile_update_view(request):
     """Profil bilgilerini güncelleme"""
     if not request.user.is_authenticated:
         return redirect('accounts:login')
-    
-    # Get or create profile (signal should have created it, but use get_or_create to be safe)
-    profile, created = Profile.objects.get_or_create(
-        user=request.user,
-        defaults={
-            'birth_date': None,
-            'bio': '',
-            'avatar': None
-        }
-    )
-    
+
     if request.method == 'POST':
-        user_form = ProfileUpdateForm(request.user, request.POST)
-        profile_form = ProfileDetailsForm(request.POST, request.FILES, instance=profile)
-        
-        if user_form.is_valid() and profile_form.is_valid():
-            user_form.save()
-            profile_form.save()
-            
+        form = ProfileUpdateForm(request.user, request.POST, request.FILES)
+
+        if form.is_valid():
+            form.save()
+
             messages.success(request, 'Profiliniz başarıyla güncellendi.')
             return redirect('accounts:profile')
     else:
-        user_form = ProfileUpdateForm(request.user)
-        profile_form = ProfileDetailsForm(instance=profile)
-    
+        form = ProfileUpdateForm(request.user)
+
     return render(request, 'accounts/private/profile_update.html', {
-        'user_form': user_form,
-        'profile_form': profile_form
+        'form': form
     })
 
 def username_change_view(request):

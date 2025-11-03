@@ -372,7 +372,11 @@ class EmailChangeForm(forms.Form):
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ['first_name', 'last_name']
+        fields = ['first_name', 'last_name', 'birth_date', 'bio', 'avatar']
+        widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date'}),
+            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Kendiniz hakkında kısa bilgi...'}),
+        }
 
     def __init__(self, user, *args, **kwargs):
         self.user = user
@@ -396,28 +400,18 @@ class ProfileUpdateForm(forms.ModelForm):
 
         return last_name
 
+    def clean_bio(self):
+        bio = self.cleaned_data.get('bio', '').strip()
+
+        if len(bio) > 500:
+            raise ValidationError('Bio en fazla 500 karakter olabilir')
+
+        return bio
+
     def save(self, commit=True):
         # Update profile fields
         profile = super().save(commit=commit)
         return profile
-
-
-class ProfileDetailsForm(forms.ModelForm):
-    class Meta:
-        model = Profile
-        fields = ['birth_date', 'bio', 'avatar']
-        widgets = {
-            'birth_date': forms.DateInput(attrs={'type': 'date'}),
-            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Kendiniz hakkında kısa bilgi...'}),
-        }
-    
-    def clean_bio(self):
-        bio = self.cleaned_data.get('bio', '').strip()
-        
-        if len(bio) > 500:
-            raise ValidationError('Bio en fazla 500 karakter olabilir')
-        
-        return bio
 
 
 class UsernameChangeForm(forms.Form):
