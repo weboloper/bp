@@ -802,29 +802,23 @@ class MeAPIView(APIView):
                 # Save updated profile
                 user = serializer.save()
 
-                # Prepare data for response serializer
-                profile_data = {
-                    'first_name': user.profile.first_name if hasattr(user, 'profile') else '',
-                    'last_name': user.profile.last_name if hasattr(user, 'profile') else ''
+                # Return same data structure as GET
+                data = {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    'is_active': user.is_active,
+                    'is_verified': user.is_verified,
+                    'has_password': user.has_usable_password(),
+                    'date_joined': user.date_joined,
+                    'last_login': user.last_login,
+                    'profile': user.profile if hasattr(user, 'profile') else None
                 }
 
-                # Get full profile serialized with avatar URL
-                profile_serializer = None
-                if hasattr(user, 'profile'):
-                    profile_serializer = UserProfileSerializer(
-                        user.profile,
-                        context={'request': request}
-                    )
+                # Serialize with request context for full URLs
+                me_serializer = MeSerializer(data, context={'request': request})
 
-                return Response({
-                    'detail': 'Profiliniz başarıyla güncellendi.',
-                    'user': {
-                        'id': user.id,
-                        'username': user.username,
-                        'email': user.email,
-                        'profile': profile_serializer.data if profile_serializer else None
-                    }
-                }, status=status.HTTP_200_OK)
+                return Response(me_serializer.data, status=status.HTTP_200_OK)
 
             except Exception as e:
                 return Response(
