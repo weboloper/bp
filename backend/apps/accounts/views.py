@@ -238,6 +238,53 @@ def password_reset_confirm_view(request, uidb64, token):
             'validlink': False
         })
 
+def password_reset_request_otp_view(request):
+    """Şifremi unuttum formu"""
+    if request.method == 'POST':
+        form = PasswordResetForm(request.POST)
+        
+        if form.is_valid():
+            user = form.get_user()
+            
+            if user:
+                # Generate reset token
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                # Create reset link
+                reset_link = f"{settings.FRONTEND_URL}/accounts/password-reset-confirm/{uid}/{token}/"
+                
+                # Send password reset email
+                try:
+                    EmailService.send_critical_email(
+                        template_name='accounts/emails/password_reset',
+                        context={
+                            'user': user,
+                            'reset_link': reset_link,
+                            'site_url': settings.FRONTEND_URL,
+                        },
+                        subject='Şifre Sıfırlama Talebi - BP Django App',
+                        recipient_list=[user.email]
+                    )
+                    
+                    messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
+                    return redirect('home')
+                    
+                except Exception as e:
+                    print(f"Password reset email failed: {e}")
+                    form.add_error('email', 'Email gönderimi başarısız. Lütfen tekrar deneyin.')
+            else:
+                # Security: Don't reveal if email exists
+                messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
+                return redirect('home')
+        
+        return render(request, 'accounts/public/password_reset_request.html', {
+            'errors': form.errors,
+            'email': request.POST.get('email', '')
+        })
+    
+    return render(request, 'accounts/public/password_reset_request.html')
+
 def email_verification_confirm_view(request, uidb64, token):
     """Email doğrulama linki ile hesap doğrulama"""
     try:
