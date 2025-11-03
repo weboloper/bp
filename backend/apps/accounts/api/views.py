@@ -822,8 +822,6 @@ class MeAPIView(APIView):
                         'id': user.id,
                         'username': user.username,
                         'email': user.email,
-                        'first_name': profile_data['first_name'],
-                        'last_name': profile_data['last_name'],
                         'profile': profile_serializer.data if profile_serializer else None
                     }
                 }, status=status.HTTP_200_OK)
