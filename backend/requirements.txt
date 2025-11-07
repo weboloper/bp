@@ -61,3 +61,6 @@ django-summernote==0.8.20.0
 
 # API Documentation
 drf-spectacular==0.26.5
+
+# Filtering
+django-filter==24.3

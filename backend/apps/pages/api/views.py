@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from django_filters import rest_framework as filters
 
 from pages.models import Page
 from .serializers import (
@@ -11,6 +12,7 @@ from .serializers import (
     PageSerializer,
     PageDetailSerializer
 )
+from .filters import PageFilter
 
 
 @method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='list')
@@ -32,9 +34,17 @@ class PageViewSet(viewsets.ModelViewSet):
     - PATCH  /api/pages/{slug}/       - Kısmi güncelle (admin only)
     - DELETE /api/pages/{slug}/       - Sil (admin only)
     - GET    /api/pages/tree/         - Hierarchical tree yapısı
+
+    Filtering:
+    - ?parent=1              - Filter by parent ID
+    - ?parent_isnull=true    - Filter root pages (no parent)
+    - ?is_published=true     - Filter by published status
+    - ?search=hakkımızda     - Search in title and content
     """
     queryset = Page.objects.all()
     lookup_field = 'slug'
+    filterset_class = PageFilter
+    filter_backends = [filters.DjangoFilterBackend]
 
     def get_permissions(self):
         """
@@ -52,11 +62,10 @@ class PageViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Filter queryset and optimize queries.
+        Filter queryset based on user permissions and optimize queries.
 
-        Query Parameters:
-        - parent: Parent ID'ye göre filtrele (ör: ?parent=1 veya ?parent=null)
-        - search: Başlık veya içeriğe göre ara (ör: ?search=hakkımızda)
+        Filtering is handled by PageFilter (django-filter).
+        This method only handles permissions and query optimization.
         """
         user = self.request.user
 
@@ -70,23 +79,6 @@ class PageViewSet(viewsets.ModelViewSet):
         # Query optimization
         queryset = queryset.select_related('parent')
         queryset = queryset.prefetch_related('children')
-
-        # Parent filtreleme
-        parent_param = self.request.query_params.get('parent')
-        if parent_param is not None:
-            if parent_param.lower() == 'null':
-                queryset = queryset.filter(parent__isnull=True)
-            else:
-                try:
-                    parent_id = int(parent_param)
-                    queryset = queryset.filter(parent_id=parent_id)
-                except ValueError:
-                    pass  # Invalid parent_id, ignore
-
-        # Arama
-        search_query = self.request.query_params.get('search')
-        if search_query:
-            queryset = queryset.filter(title__icontains=search_query) | queryset.filter(content__icontains=search_query)
 
         return queryset.order_by('order', 'title')
 

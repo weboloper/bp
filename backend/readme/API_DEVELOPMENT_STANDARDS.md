@@ -484,3 +484,26 @@ Yeni bir API modülü olu_tururken kontrol listesi:
 - [ ] Tüm endpoint'ler test edildi
 
 ---
+
+## Örnek Referans: Pages App
+
+Bu standartlar1n tam uygulanmasıi için `pages` app'ini inceleyin:
+
+- **Serializers**: `backend/apps/pages/api/serializers.py`
+- **Views**: `backend/apps/pages/api/views.py`
+- **URLs**: `backend/apps/pages/api/urls.py`
+- **Admin**: `backend/apps/pages/admin.py`
+
+---
+
+## Sonuç
+
+Bu standartlara uyarak:
+
+-  Tutarl1 kod yap1s1
+-  Daha iyi performans
+-  Kolay bak1m
+-  Tak1m çal1_mas1na uygun
+-  Industry best practices
+
+**Her yeni API modülü bu standartlar1 takip etmelidir.**

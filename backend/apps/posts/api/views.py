@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from django_filters import rest_framework as filters
 
 from posts.models import Post
 from .serializers import (
@@ -12,6 +13,7 @@ from .serializers import (
     PostDetailSerializer
 )
 from .permissions import IsOwnerOrReadOnly
+from .filters import PostFilter
 
 
 @method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='list')
@@ -34,9 +36,18 @@ class PostViewSet(viewsets.ModelViewSet):
     - PATCH  /api/posts/{id}/         - Kısmi güncelle (owner only)
     - DELETE /api/posts/{id}/         - Sil (owner only)
     - GET    /api/posts/my/           - Kullanıcının kendi postları
+
+    Filtering:
+    - ?author=1              - Filter by author ID
+    - ?is_published=true     - Filter by published status
+    - ?search=django         - Search in title and content
+    - ?created_after=2024-01-01  - Filter posts created after date
+    - ?created_before=2024-12-31 - Filter posts created before date
     """
     queryset = Post.objects.all()
     permission_classes = [IsOwnerOrReadOnly]
+    filterset_class = PostFilter
+    filter_backends = [filters.DjangoFilterBackend]
 
     def get_permissions(self):
         """
@@ -59,11 +70,10 @@ class PostViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Filter queryset and optimize queries.
+        Filter queryset based on user permissions and optimize queries.
 
-        Query Parameters:
-        - author: Author ID'ye göre filtrele (ör: ?author=1)
-        - search: Başlık veya içeriğe göre ara (ör: ?search=django)
+        Filtering is handled by PostFilter (django-filter).
+        This method only handles permissions and query optimization.
         """
         user = self.request.user
 
@@ -79,19 +89,6 @@ class PostViewSet(viewsets.ModelViewSet):
 
         # Query optimization
         queryset = queryset.select_related('author')
-
-        # Author filtreleme
-        author_id = self.request.query_params.get('author')
-        if author_id:
-            try:
-                queryset = queryset.filter(author_id=int(author_id))
-            except (ValueError, TypeError):
-                pass  # Invalid author_id, ignore
-
-        # Arama
-        search_query = self.request.query_params.get('search')
-        if search_query:
-            queryset = queryset.filter(title__icontains=search_query) | queryset.filter(content__icontains=search_query)
 
         return queryset.order_by('-created_at')
 
