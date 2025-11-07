@@ -1,291 +1,218 @@
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework import status
-from django.shortcuts import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 
 from posts.models import Post
 from .serializers import (
-    PostListSerializer,
-    PostDetailSerializer,
-    PostCreateUpdateSerializer
+    PostBasicSerializer,
+    PostSerializer,
+    PostDetailSerializer
 )
 from .permissions import IsOwnerOrReadOnly
 
 
-@method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='get')
-class PostListAPIView(APIView):
+@method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='list')
+@method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='retrieve')
+@method_decorator(ratelimit(key='user_or_ip', rate='30/h', method=['POST', 'PUT', 'PATCH', 'DELETE']), name='dispatch')
+class PostViewSet(viewsets.ModelViewSet):
     """
-    Tüm yayınlanmış postları listele
-    GET: Public access (AllowAny)
-    
-    Query Parameters:
-    - author: Author ID'ye göre filtrele (ör: ?author=1)
-    - search: Başlık veya içeriğe göre ara (ör: ?search=django)
-    
-    Rate limit: 60 requests per minute per IP
+    ViewSet for Post model.
+    Provides CRUD operations for posts.
+
+    List/Retrieve: AllowAny (published posts only)
+    Create: IsAuthenticated
+    Update/Delete: IsOwnerOrReadOnly (owner only)
+
+    Endpoints:
+    - GET    /api/posts/              - Liste (published only)
+    - POST   /api/posts/              - Yeni post oluştur (authenticated)
+    - GET    /api/posts/{id}/         - Detay (published only)
+    - PUT    /api/posts/{id}/         - Güncelle (owner only)
+    - PATCH  /api/posts/{id}/         - Kısmi güncelle (owner only)
+    - DELETE /api/posts/{id}/         - Sil (owner only)
+    - GET    /api/posts/my/           - Kullanıcının kendi postları
     """
-    permission_classes = [AllowAny]
-    
-    def get(self, request):
-        queryset = Post.objects.filter(is_published=True).select_related('author')
-        
+    queryset = Post.objects.all()
+    permission_classes = [IsOwnerOrReadOnly]
+
+    def get_permissions(self):
+        """
+        List ve Retrieve için AllowAny, Create için IsAuthenticated,
+        Update/Delete için IsOwnerOrReadOnly.
+        """
+        if self.action in ['list', 'retrieve']:
+            return [AllowAny()]
+        elif self.action == 'create':
+            return [IsAuthenticated()]
+        elif self.action == 'my_posts':
+            return [IsAuthenticated()]
+        return [IsOwnerOrReadOnly()]
+
+    def get_serializer_class(self):
+        """Action'a göre uygun serializer döndür"""
+        if self.action == 'retrieve':
+            return PostDetailSerializer
+        return PostSerializer
+
+    def get_queryset(self):
+        """
+        Filter queryset and optimize queries.
+
+        Query Parameters:
+        - author: Author ID'ye göre filtrele (ör: ?author=1)
+        - search: Başlık veya içeriğe göre ara (ör: ?search=django)
+        """
+        user = self.request.user
+
+        # Admin veya owner kendi unpublished postlarını da görebilir
+        if user.is_staff or user.is_superuser:
+            queryset = Post.objects.all()
+        elif user.is_authenticated and self.action == 'my_posts':
+            # Kullanıcının kendi tüm postları (published + unpublished)
+            queryset = Post.objects.filter(author=user)
+        else:
+            # Normal kullanıcılar için sadece yayınlanmış postlar
+            queryset = Post.objects.filter(is_published=True)
+
+        # Query optimization
+        queryset = queryset.select_related('author')
+
         # Author filtreleme
-        author_id = request.query_params.get('author')
+        author_id = self.request.query_params.get('author')
         if author_id:
             try:
                 queryset = queryset.filter(author_id=int(author_id))
             except (ValueError, TypeError):
-                return Response(
-                    {'detail': 'Geçersiz author parametresi'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
+                pass  # Invalid author_id, ignore
+
         # Arama
-        search_query = request.query_params.get('search')
+        search_query = self.request.query_params.get('search')
         if search_query:
-            queryset = queryset.filter(
-                title__icontains=search_query
-            ) | queryset.filter(
-                content__icontains=search_query
-            )
-        
-        # Sıralama
-        queryset = queryset.order_by('-created_at')
-        
-        serializer = PostListSerializer(
-            queryset, 
-            many=True,
-            context={'request': request}
-        )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            queryset = queryset.filter(title__icontains=search_query) | queryset.filter(content__icontains=search_query)
 
+        return queryset.order_by('-created_at')
 
-@method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='get')
-class PostDetailAPIView(APIView):
-    """
-    Post detayını getir (ID ile)
-    GET: Public access (AllowAny)
-    
-    Rate limit: 60 requests per minute per IP
-    """
-    permission_classes = [AllowAny]
-    
-    def get(self, request, pk):
-        post = get_object_or_404(Post, pk=pk, is_published=True)
-        serializer = PostDetailSerializer(post, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+    def create(self, request, *args, **kwargs):
+        """
+        Yeni post oluştur (Authenticated users only).
 
+        POST /api/posts/
+        """
+        serializer = self.get_serializer(data=request.data)
 
-@method_decorator(ratelimit(key='user_or_ip', rate='30/h', method='POST'), name='post')
-class PostCreateAPIView(APIView):
-    """
-    Yeni post oluştur
-    POST: Requires authentication (IsAuthenticated)
-    
-    Rate limit: 30 requests per hour per user or IP
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def post(self, request):
-        serializer = PostCreateUpdateSerializer(data=request.data)
-        
         if serializer.is_valid():
             try:
+                # Author'ı mevcut kullanıcı olarak set et
                 post = serializer.save(author=request.user)
-                
-                # Return created post data
+
+                # Return created post data with detail serializer
                 response_serializer = PostDetailSerializer(post, context={'request': request})
                 return Response(
                     response_serializer.data,
                     status=status.HTTP_201_CREATED
                 )
-                
+
             except Exception as e:
                 return Response(
-                    {'detail': 'Post oluşturulurken bir hata oluştu'},
+                    {'detail': f'Post oluşturulurken bir hata oluştu: {str(e)}'},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
-        
-        # Return validation errors
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    def update(self, request, *args, **kwargs):
+        """
+        Post güncelle - tüm alanlar (Owner only).
 
-@method_decorator(ratelimit(key='user', rate='60/m', method='GET'), name='get')
-class MyPostsAPIView(APIView):
-    """
-    Kullanıcının kendi postlarını listele
-    GET: Requires authentication (IsAuthenticated)
-    
-    Hem yayınlanmış hem yayınlanmamış postları gösterir
-    
-    Rate limit: 60 requests per minute per user
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        posts = Post.objects.filter(author=request.user).order_by('-created_at')
-        serializer = PostListSerializer(posts, many=True, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        PUT /api/posts/{id}/
+        """
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
 
-
-@method_decorator(ratelimit(key='user_or_ip', rate='30/h', method=['PUT', 'PATCH']), name='dispatch')
-class PostUpdateAPIView(APIView):
-    """
-    Post güncelle
-    PUT/PATCH: Owner only (IsAuthenticated + IsOwnerOrReadOnly)
-    
-    Rate limit: 30 requests per hour per user or IP
-    """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-    
-    def get_object(self, pk):
-        """Get post and check ownership via permission class"""
-        post = get_object_or_404(Post, pk=pk)
-        
-        # Check object-level permission
-        for permission in self.permission_classes:
-            permission_instance = permission()
-            if hasattr(permission_instance, 'has_object_permission'):
-                if not permission_instance.has_object_permission(self.request, self, post):
-                    from rest_framework.exceptions import PermissionDenied
-                    raise PermissionDenied('Bu postu düzenleme yetkiniz yok')
-        
-        return post
-    
-    def put(self, request, pk):
-        """Full update - all fields required"""
-        post = self.get_object(pk)
-        serializer = PostCreateUpdateSerializer(post, data=request.data)
-        
-        if serializer.is_valid():
-            try:
-                post = serializer.save()
-                
-                # Return updated post data
-                response_serializer = PostDetailSerializer(post, context={'request': request})
-                return Response(
-                    response_serializer.data,
-                    status=status.HTTP_200_OK
-                )
-                
-            except Exception as e:
-                return Response(
-                    {'detail': 'Post güncellenirken bir hata oluştu'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def patch(self, request, pk):
-        """Partial update - only provided fields"""
-        post = self.get_object(pk)
-        serializer = PostCreateUpdateSerializer(post, data=request.data, partial=True)
-        
-        if serializer.is_valid():
-            try:
-                post = serializer.save()
-                
-                # Return updated post data
-                response_serializer = PostDetailSerializer(post, context={'request': request})
-                return Response(
-                    response_serializer.data,
-                    status=status.HTTP_200_OK
-                )
-                
-            except Exception as e:
-                return Response(
-                    {'detail': 'Post güncellenirken bir hata oluştu'},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-@method_decorator(ratelimit(key='user_or_ip', rate='30/h', method='DELETE'), name='delete')
-class PostDeleteAPIView(APIView):
-    """
-    Post sil
-    DELETE: Owner only (IsAuthenticated + IsOwnerOrReadOnly)
-    
-    Rate limit: 30 requests per hour per user or IP
-    """
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
-    
-    def get_object(self, pk):
-        """Get post and check ownership via permission class"""
-        post = get_object_or_404(Post, pk=pk)
-        
-        # Check object-level permission
-        for permission in self.permission_classes:
-            permission_instance = permission()
-            if hasattr(permission_instance, 'has_object_permission'):
-                if not permission_instance.has_object_permission(self.request, self, post):
-                    from rest_framework.exceptions import PermissionDenied
-                    raise PermissionDenied('Bu postu silme yetkiniz yok')
-        
-        return post
-    
-    def delete(self, request, pk):
-        post = self.get_object(pk)
-        
-        try:
-            post_title = post.title
-            post.delete()
-            
+        # Permission check (IsOwnerOrReadOnly handles this, but double check)
+        if instance.author != request.user and not request.user.is_staff:
             return Response(
-                {'detail': f'"{post_title}" başarıyla silindi'},
+                {'detail': 'Bu post\'u güncelleme yetkiniz yok'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+        if serializer.is_valid():
+            try:
+                post = serializer.save()
+
+                # Return updated post data with detail serializer
+                response_serializer = PostDetailSerializer(post, context={'request': request})
+                return Response(
+                    response_serializer.data,
+                    status=status.HTTP_200_OK
+                )
+
+            except Exception as e:
+                return Response(
+                    {'detail': f'Post güncellenirken bir hata oluştu: {str(e)}'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Post kısmi güncelle - sadece gönderilen alanlar (Owner only).
+
+        PATCH /api/posts/{id}/
+        """
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        Post sil (Owner only).
+
+        DELETE /api/posts/{id}/
+        """
+        instance = self.get_object()
+
+        # Permission check (IsOwnerOrReadOnly handles this, but double check)
+        if instance.author != request.user and not request.user.is_staff:
+            return Response(
+                {'detail': 'Bu post\'u silme yetkiniz yok'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+            post_title = instance.title
+            instance.delete()
+
+            return Response(
+                {'detail': f'"{post_title}" başlıklı post başarıyla silindi'},
                 status=status.HTTP_200_OK
             )
-            
+
         except Exception as e:
             return Response(
-                {'detail': 'Post silinirken bir hata oluştu'},
+                {'detail': f'Post silinirken bir hata oluştu: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    # ========================================================================
+    # Custom Actions
+    # ========================================================================
 
-# ============================================
-# TEST ENDPOINTS
-# ============================================
+    @action(detail=False, methods=['get'], url_path='my')
+    def my_posts(self, request):
+        """
+        Kullanıcının kendi postlarını döndürür (published + unpublished).
 
-@method_decorator(ratelimit(key='ip', rate='60/m', method='GET'), name='get')
-class TestPublicAPIView(APIView):
-    """
-    Test endpoint - Public access
-    GET: Anyone can access
-    
-    Rate limit: 60 requests per minute per IP
-    """
-    permission_classes = [AllowAny]
-    
-    def get(self, request):
-        data = {
-            'message': 'This is a public endpoint',
-            'authenticated': request.user.is_authenticated,
-        }
-        if request.user.is_authenticated:
-            data['username'] = request.user.username
-            data['user_id'] = request.user.id
-        
-        return Response(data, status=status.HTTP_200_OK)
+        GET /api/posts/my/
 
-
-@method_decorator(ratelimit(key='user', rate='60/m', method='GET'), name='get')
-class TestPrivateAPIView(APIView):
-    """
-    Test endpoint - Requires authentication
-    GET: Only authenticated users
-    
-    Rate limit: 60 requests per minute per user
-    """
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        return Response({
-            'message': f'Hello {request.user.username}!',
-            'user_id': request.user.id,
-            'email': request.user.email,
-        }, status=status.HTTP_200_OK)
+        Returns:
+            200: Kullanıcının tüm postları
+        """
+        queryset = self.filter_queryset(self.get_queryset())
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
