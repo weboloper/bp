@@ -295,6 +295,33 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+    # ✅ SECURITY: Rate Limiting to prevent abuse and brute-force attacks
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # General rate limits
+        'anon': '100/hour',           # Anonymous users: 100 requests per hour
+        'user': '1000/hour',          # Authenticated users: 1000 requests per hour
+
+        # Authentication endpoints (stricter limits to prevent brute-force)
+        'login': '10/hour',           # Login attempts: 10 per hour
+        'register': '5/hour',         # Registration: 5 per hour
+        'password_reset': '3/hour',   # Password reset requests: 3 per hour
+        'email_verify': '5/hour',     # Email verification resends: 5 per hour
+        'token_refresh': '20/hour',   # Token refresh: 20 per hour
+
+        # Social auth (prevent OAuth abuse)
+        'social_auth': '10/hour',     # Social login attempts: 10 per hour
+
+        # SMS endpoints (prevent SMS bombing)
+
+        # Sensitive operations
+
+    },
 }
 
 # Django Simple JWT Settings
