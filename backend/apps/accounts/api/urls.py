@@ -63,8 +63,8 @@ urlpatterns = [
     path('auth/social/apple/', AppleSocialLoginAPIView.as_view(), name='apple_social_login'),
     
     # User profile endpoints - RESTful design
-    path('me/', MeAPIView.as_view(), name='current_user'),  # GET: minimal profile, PATCH: update
-    path('me/profile/', ProfileDetailAPIView.as_view(), name='profile_detail'),  # GET: detailed profile
+    path('me/', MeAPIView.as_view(), name='current_user'),  # GET: minimal profile (readonly)
+    path('me/profile/', ProfileDetailAPIView.as_view(), name='profile_detail'),  # GET: detailed profile, PATCH: update profile
     
     # Cookie-based endpoints (Farklı host'ta çalışmaz - devre dışı)
     # path('auth/login-cookie/', login_cookie, name='login_cookie'),
