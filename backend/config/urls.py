@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from core.views import home, health_check, api_root, test_email
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 # Custom error handlers
 handler404 = 'pages.handlers.custom_404_handler'
@@ -42,9 +43,20 @@ urlpatterns = [
     # API endpoints
     path("api/", include([
         path('', api_root, name='api_root'),
-        path('accounts/', include('accounts.api.urls')),
-        path('posts/', include('posts.api.urls')),
-        path('pages/', include('pages.api.urls')),
+
+        # API Documentation (version-agnostic)
+        path('schema/', SpectacularAPIView.as_view(), name='schema'),
+        path('docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+        path('redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+        # Versioned API endpoints
+        path("v1/", include([
+            # App endpoints
+            path('accounts/', include('accounts.api.urls')),
+            path('posts/', include('posts.api.urls')),
+            path('pages/', include('pages.api.urls')),
+        ]))
+
     ])),
 
     # Pages app - FALLBACK (en sonda olmalı)

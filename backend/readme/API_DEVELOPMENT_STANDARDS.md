@@ -301,7 +301,7 @@ urlpatterns = [
 
 ### URL Naming Conventions
 
-- **Çoul kullan**: `companies`, `locations`, `staff` (tekil deil)
+- **Çoğul kullan**: `companies`, `locations`, `staff` (tekil değil)
 - **Kebab-case**: `company-types`, `purchase-orders`
 - **Basename**: Model ad1n1n lowercase hali (tek kelime)
 
@@ -388,7 +388,7 @@ def get_queryset(self):
 **N+1 query problemini önle:**
 
 ```python
-#  Good
+# Good
 queryset = queryset.select_related('company', 'user')
 queryset = queryset.prefetch_related('items', 'tags')
 
@@ -500,10 +500,10 @@ Bu standartlar1n tam uygulanmasıi için `pages` app'ini inceleyin:
 
 Bu standartlara uyarak:
 
--  Tutarl1 kod yap1s1
--  Daha iyi performans
--  Kolay bak1m
--  Tak1m çal1_mas1na uygun
--  Industry best practices
+- Tutarl1 kod yap1s1
+- Daha iyi performans
+- Kolay bak1m
+- Tak1m çal1_mas1na uygun
+- Industry best practices
 
 **Her yeni API modülü bu standartlar1 takip etmelidir.**
