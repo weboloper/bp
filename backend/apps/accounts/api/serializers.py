@@ -482,8 +482,44 @@ class UserProfileSerializer(serializers.Serializer):
         return None
 
 
+class MeMinimalProfileSerializer(serializers.Serializer):
+    """Minimal profile serializer for /me/ endpoint - only essential UI fields"""
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    avatar = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField()
+
+    def get_avatar(self, obj):
+        """Return full URL for avatar"""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+
+
+class ProfileDetailSerializer(serializers.Serializer):
+    """Detailed profile serializer for /me/profile/ endpoint - all profile fields"""
+    first_name = serializers.CharField()
+    last_name = serializers.CharField()
+    birth_date = serializers.DateField()
+    bio = serializers.CharField()
+    avatar = serializers.SerializerMethodField()
+    updated_at = serializers.DateTimeField()
+
+    def get_avatar(self, obj):
+        """Return full URL for avatar"""
+        if obj.avatar:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.avatar.url)
+            return obj.avatar.url
+        return None
+
+
 class MeSerializer(serializers.Serializer):
-    """Me endpoint serializer for current user data"""
+    """Me endpoint serializer for current user data - minimal response for navbar/UI"""
     id = serializers.IntegerField()
     username = serializers.CharField()
     email = serializers.EmailField()
@@ -493,4 +529,4 @@ class MeSerializer(serializers.Serializer):
     has_password = serializers.BooleanField()
     date_joined = serializers.DateTimeField()
     last_login = serializers.DateTimeField()
-    profile = UserProfileSerializer()
+    profile = MeMinimalProfileSerializer()

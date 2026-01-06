@@ -27,7 +27,8 @@ from .serializers import (
     FacebookSocialLoginSerializer,
     AppleSocialLoginSerializer,
     MeSerializer,
-    UserProfileSerializer
+    UserProfileSerializer,
+    ProfileDetailSerializer
 )
 
 User = get_user_model()
@@ -757,17 +758,15 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class MeAPIView(APIView):
     """
-    Current user profile endpoint - RESTful design
-    GET: Get current user profile
-    PATCH: Update profile (first_name, last_name, bio, avatar, birth_date)
+    Current user endpoint - minimal profile data for navbar/UI
+    GET: Get current user with minimal profile information
     Requires JWT authentication
-    No rate limiting needed for GET requests
     """
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request):
         """
-        Get current user profile
+        Get current user with minimal profile
         """
         user = request.user
 
@@ -789,7 +788,35 @@ class MeAPIView(APIView):
         serializer = MeSerializer(data, context={'request': request})
 
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
+
+
+class ProfileDetailAPIView(APIView):
+    """
+    Detailed profile endpoint
+    GET: Get detailed profile information (bio, birth_date, etc.)
+    PATCH: Update profile (first_name, last_name, bio, avatar, birth_date)
+    Requires JWT authentication
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        Get detailed profile information
+        """
+        user = request.user
+
+        # Get profile (should exist due to signal)
+        if not hasattr(user, 'profile'):
+            return Response(
+                {'detail': 'Profile not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Serialize with request context for full URLs
+        serializer = ProfileDetailSerializer(user.profile, context={'request': request})
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @method_decorator(ratelimit(key='user', rate='20/h', method='PATCH'))
     def patch(self, request):
         """
@@ -803,24 +830,10 @@ class MeAPIView(APIView):
                 # Save updated profile
                 user = serializer.save()
 
-                # Return same data structure as GET
-                data = {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    'is_active': user.is_active,
-                    'is_staff': user.is_staff,
-                    'is_verified': user.is_verified,
-                    'has_password': user.has_usable_password(),
-                    'date_joined': user.date_joined,
-                    'last_login': user.last_login,
-                    'profile': user.profile if hasattr(user, 'profile') else None
-                }
+                # Return detailed profile data
+                profile_serializer = ProfileDetailSerializer(user.profile, context={'request': request})
 
-                # Serialize with request context for full URLs
-                me_serializer = MeSerializer(data, context={'request': request})
-
-                return Response(me_serializer.data, status=status.HTTP_200_OK)
+                return Response(profile_serializer.data, status=status.HTTP_200_OK)
 
             except Exception as e:
                 return Response(
