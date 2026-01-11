@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from posts.models import Post
 from django.contrib.auth import get_user_model
 
@@ -80,11 +81,11 @@ class PostSerializer(serializers.ModelSerializer):
         title = value.strip() if value else ''
 
         if not title:
-            raise serializers.ValidationError('Başlık boş olamaz')
+            raise serializers.ValidationError(_('Title cannot be empty'))
         if len(title) < 3:
-            raise serializers.ValidationError('Başlık en az 3 karakter olmalıdır')
+            raise serializers.ValidationError(_('Title must be at least 3 characters'))
         if len(title) > 255:
-            raise serializers.ValidationError('Başlık en fazla 255 karakter olabilir')
+            raise serializers.ValidationError(_('Title must be at most 255 characters'))
 
         return title
 
@@ -93,9 +94,9 @@ class PostSerializer(serializers.ModelSerializer):
         content = value.strip() if value else ''
 
         if not content:
-            raise serializers.ValidationError('İçerik boş olamaz')
+            raise serializers.ValidationError(_('Content cannot be empty'))
         if len(content) < 10:
-            raise serializers.ValidationError('İçerik en az 10 karakter olmalıdır')
+            raise serializers.ValidationError(_('Content must be at least 10 characters'))
 
         return content
 

@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken, UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.contrib.auth import authenticate, get_user_model
+from django.utils.translation import gettext_lazy as _
 from .utils import get_token_from_cookie, set_jwt_cookies, clear_jwt_cookies
 
 User = get_user_model()
@@ -21,7 +22,7 @@ def login_cookie(request):
     
     if not username or not password:
         return Response(
-            {'error': 'Kullanıcı adı ve şifre gerekli'}, 
+            {'error': _('Username and password are required')}, 
             status=status.HTTP_400_BAD_REQUEST
         )
     
@@ -30,20 +31,20 @@ def login_cookie(request):
     
     if user is None:
         return Response(
-            {'error': 'Geçersiz kullanıcı adı veya şifre'}, 
+            {'error': _('Invalid username or password')}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
     
     if not user.is_active:
         return Response(
-            {'error': 'Kullanıcı hesabı devre dışı'}, 
+            {'error': _('User account is disabled')}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
     
     # Başarılı login response'u oluştur
     response = Response(
         {
-            'message': 'Başarıyla giriş yapıldı',
+            'message': _('Successfully logged in'),
             'user': {
                 'id': user.id,
                 'username': user.username,
@@ -67,7 +68,7 @@ def logout_cookie(request):
     Cookie-based logout endpoint'i
     """
     response = Response(
-        {'message': 'Başarıyla çıkış yapıldı'}, 
+        {'message': _('Successfully logged out')}, 
         status=status.HTTP_200_OK
     )
     
@@ -87,7 +88,7 @@ def token_verify_cookie(request):
     
     if not token:
         return Response(
-            {'error': 'Access token cookie bulunamadı'}, 
+            {'error': _('Access token cookie not found')}, 
             status=status.HTTP_400_BAD_REQUEST
         )
     
@@ -95,14 +96,14 @@ def token_verify_cookie(request):
         # Token'ı doğrula
         UntypedToken(token)
         return Response(
-            {'valid': True, 'message': 'Token geçerli'}, 
+            {'valid': True, 'message': _('Token is valid')}, 
             status=status.HTTP_200_OK
         )
     except (InvalidToken, TokenError) as e:
         return Response(
             {
                 'valid': False, 
-                'error': 'Token geçersiz veya süresi dolmuş',
+                'error': _('Token is invalid or has expired'),
                 'detail': str(e)
             }, 
             status=status.HTTP_401_UNAUTHORIZED
@@ -119,7 +120,7 @@ def token_refresh_cookie(request):
     
     if not refresh_token:
         return Response(
-            {'error': 'Refresh token cookie bulunamadı'}, 
+            {'error': _('Refresh token cookie not found')}, 
             status=status.HTTP_400_BAD_REQUEST
         )
     
@@ -131,7 +132,7 @@ def token_refresh_cookie(request):
         # Response oluştur ve yeni access token'ı cookie'ye set et
         response = Response(
             {
-                'message': 'Token başarıyla yenilendi'
+                'message': _('Token successfully refreshed')
             }, 
             status=status.HTTP_200_OK
         )
@@ -151,7 +152,7 @@ def token_refresh_cookie(request):
     except (InvalidToken, TokenError) as e:
         return Response(
             {
-                'error': 'Refresh token geçersiz veya süresi dolmuş',
+                'error': _('Refresh token is invalid or has expired'),
                 'detail': str(e)
             }, 
             status=status.HTTP_401_UNAUTHORIZED

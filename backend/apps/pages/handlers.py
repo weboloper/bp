@@ -25,7 +25,7 @@ def custom_404_handler(request, exception):
     context = {
         'requested_path': f'/{requested_path}/',
         'similar_pages': similar_pages,
-        'page_title': 'Sayfa Bulunamadı'
+        'page_title': 'Page Not Found'
     }
     
     return render(request, 'pages/404.html', context, status=404)

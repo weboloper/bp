@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 from .models import Page
 from django_summernote.admin import SummernoteModelAdmin
 
@@ -17,10 +18,10 @@ class PageAdmin(SummernoteModelAdmin):
         (None, {
             'fields': ('title', 'slug', 'parent')
         }),
-        ('İçerik', {
+        (_('Content'), {
             'fields': ('content',)
         }),
-        ('Ayarlar', {
+        (_('Settings'), {
             'fields': ('is_published', 'order'),
             'classes': ('collapse',)
         }),

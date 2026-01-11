@@ -9,6 +9,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django_ratelimit.decorators import ratelimit
 from core.email_service import EmailService
 
@@ -85,7 +86,7 @@ class RegisterAPIView(APIView):
             except Exception as e:
                 # Server error - DRF default format
                 return Response(
-                    {'detail': 'Kayıt sırasında bir hata oluştu'}, 
+                    {'detail': _('An error occurred during registration')}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
@@ -138,7 +139,7 @@ class GoogleSocialLoginAPIView(APIView):
             except Exception as e:
                 # Unexpected errors
                 return Response(
-                    {'detail': f'Google login sırasında hata oluştu: {str(e)}'}, 
+                    {'detail': _('An error occurred during Google login: {}').format(str(e))}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
@@ -191,7 +192,7 @@ class FacebookSocialLoginAPIView(APIView):
             except Exception as e:
                 # Unexpected errors
                 return Response(
-                    {'detail': f'Facebook login sırasında hata oluştu: {str(e)}'}, 
+                    {'detail': _('An error occurred during Facebook login: {}').format(str(e))}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
@@ -244,7 +245,7 @@ class AppleSocialLoginAPIView(APIView):
             except Exception as e:
                 # Unexpected errors
                 return Response(
-                    {'detail': f'Apple login sırasında hata oluştu: {str(e)}'}, 
+                    {'detail': _('An error occurred during Apple login: {}').format(str(e))}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
@@ -267,7 +268,7 @@ class UsernameChangeAPIView(APIView):
         # Check if user has a password
         if not request.user.has_usable_password():
             return Response(
-                {'detail': 'Kullanıcı adı değiştirmek için önce bir şifre oluşturmalısınız. password-set endpoint kullanın.'},
+                {'detail': _('You must create a password first to change your username. Use the password-set endpoint.')},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -281,14 +282,14 @@ class UsernameChangeAPIView(APIView):
                 user = serializer.save()
                 
                 return Response({
-                    'detail': f'Kullanıcı adınız başarıyla "{old_username}" adresinden "{user.username}" olarak değiştirildi.',
+                    'detail': _('Your username has been successfully changed from "{}" to "{}".').format(old_username, user.username),
                     'old_username': old_username,
                     'new_username': user.username
                 }, status=status.HTTP_200_OK)
                 
             except Exception as e:
                 return Response(
-                    {'detail': 'Kullanıcı adı değiştirme sırasında hata oluştu'}, 
+                    {'detail': _('An error occurred while changing username')}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
@@ -336,13 +337,13 @@ class PasswordResetRequestAPIView(APIView):
                 except Exception as e:
                     print(f"Password reset email failed: {e}")
                     return Response(
-                        {'detail': 'Email gönderimi başarısız'}, 
+                        {'detail': _('Email sending failed')}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
             
             # Always return success (security) - DRF default format
             return Response(
-                {'detail': 'Şifre sıfırlama linki email adresinize gönderildi.'}, 
+                {'detail': _('Password reset link has been sent to your email address.')}, 
                 status=status.HTTP_200_OK
             )
         
@@ -368,7 +369,7 @@ class PasswordResetConfirmAPIView(APIView):
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
-                {'detail': 'Geçersiz sıfırlama linki'}, 
+                {'detail': _('Invalid reset link')}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -381,12 +382,12 @@ class PasswordResetConfirmAPIView(APIView):
                 try:
                     serializer.save()
                     return Response(
-                        {'detail': 'Şifreniz başarıyla değiştirildi'}, 
+                        {'detail': _('Your password has been successfully changed')}, 
                         status=status.HTTP_200_OK
                     )
                 except Exception as e:
                     return Response(
-                        {'detail': 'Şifre değiştirme sırasında hata oluştu'}, 
+                        {'detail': _('An error occurred while changing password')}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
             
@@ -395,7 +396,7 @@ class PasswordResetConfirmAPIView(APIView):
         else:
             # Invalid token
             return Response(
-                {'detail': 'Sıfırlama linki geçersiz veya süresi dolmuş'}, 
+                {'detail': _('Reset link is invalid or has expired')}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -415,7 +416,7 @@ class PasswordSetAPIView(APIView):
         # Check if user already has a password
         if request.user.has_usable_password():
             return Response(
-                {'detail': 'Zaten bir şifreniz var. Şifrenizi değiştirmek için password-change endpoint kullanın.'},
+                {'detail': _('You already have a password. Use the password-change endpoint to change your password.')},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -428,7 +429,7 @@ class PasswordSetAPIView(APIView):
 
                 return Response(
                     {
-                        'detail': 'Şifreniz başarıyla oluşturuldu',
+                        'detail': _('Your password has been successfully created'),
                         'has_password': True
                     },
                     status=status.HTTP_200_OK
@@ -436,7 +437,7 @@ class PasswordSetAPIView(APIView):
 
             except Exception as e:
                 return Response(
-                    {'detail': 'Şifre oluşturma sırasında hata oluştu'},
+                    {'detail': _('An error occurred while creating password')},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
@@ -459,7 +460,7 @@ class PasswordChangeAPIView(APIView):
         # Check if user has a password
         if not request.user.has_usable_password():
             return Response(
-                {'detail': 'Önce bir şifre oluşturmalısınız. password-set endpoint kullanın.'},
+                {'detail': _('You must create a password first. Use the password-set endpoint.')},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -500,7 +501,7 @@ class EmailChangeAPIView(APIView):
         # Check if user has a password
         if not request.user.has_usable_password():
             return Response(
-                {'detail': 'Email değiştirmek için önce bir şifre oluşturmalısınız. password-set endpoint kullanın.'},
+                {'detail': _('You must create a password first to change your email. Use the password-set endpoint.')},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -533,20 +534,20 @@ class EmailChangeAPIView(APIView):
                     )
                     
                     return Response(
-                        {'detail': f'Email değişiklik onayı {new_email} adresine gönderildi. Lütfen emailinizi kontrol edin.'}, 
+                        {'detail': _('Email change confirmation has been sent to {}. Please check your email.').format(new_email)}, 
                         status=status.HTTP_200_OK
                     )
                     
                 except Exception as e:
                     print(f"Email change confirmation email failed: {e}")
                     return Response(
-                        {'detail': 'Email gönderimi başarısız. Lütfen tekrar deneyin.'}, 
+                        {'detail': _('Email sending failed. Please try again.')}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
                 
             except Exception as e:
                 return Response(
-                    {'detail': 'Email değişiklik talebi sırasında hata oluştu'}, 
+                    {'detail': _('An error occurred during email change request')}, 
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
         
@@ -572,7 +573,7 @@ class EmailChangeConfirmAPIView(APIView):
             new_email = force_str(urlsafe_base64_decode(new_email_b64))
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
-                {'detail': 'Geçersiz email değişiklik linki'}, 
+                {'detail': _('Invalid email change link')}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -581,7 +582,7 @@ class EmailChangeConfirmAPIView(APIView):
             # Check if new email is still available
             if User.objects.filter(email__iexact=new_email).exists():
                 return Response(
-                    {'detail': 'Bu email adresi artık kullanılıyor. Lütfen farklı bir email deneyin.'}, 
+                    {'detail': _('This email address is now in use. Please try a different email.')}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
@@ -610,14 +611,14 @@ class EmailChangeConfirmAPIView(APIView):
                 print(f"Email change notification failed: {e}")
             
             return Response({
-                'detail': f'Email adresiniz başarıyla {new_email} olarak değiştirildi.',
+                'detail': _('Your email address has been successfully changed to {}.').format(new_email),
                 'old_email': old_email,
                 'new_email': new_email
             }, status=status.HTTP_200_OK)
         else:
             # Invalid token
             return Response(
-                {'detail': 'Email değişiklik linki geçersiz veya süresi dolmuş'}, 
+                {'detail': _('Email change link is invalid or has expired')}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -642,7 +643,7 @@ class EmailVerificationRequestAPIView(APIView):
             if user:
                 if user.is_verified:
                     return Response(
-                        {'detail': 'Bu email adresi zaten doğrulanmış'}, 
+                        {'detail': _('This email address is already verified')}, 
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
@@ -668,13 +669,13 @@ class EmailVerificationRequestAPIView(APIView):
                 except Exception as e:
                     print(f"Email verification resend failed: {e}")
                     return Response(
-                        {'detail': 'Email gönderimi başarısız'}, 
+                        {'detail': _('Email sending failed')}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
             
             # Always return success (security) - DRF default format
             return Response(
-                {'detail': 'Email doğrulama linki gönderildi'}, 
+                {'detail': _('Email verification link has been sent')}, 
                 status=status.HTTP_200_OK
             )
         
@@ -699,7 +700,7 @@ class EmailVerificationConfirmAPIView(APIView):
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             return Response(
-                {'detail': 'Geçersiz doğrulama linki'}, 
+                {'detail': _('Invalid verification link')}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -725,18 +726,18 @@ class EmailVerificationConfirmAPIView(APIView):
                     print(f"Welcome email failed: {e}")
                 
                 return Response(
-                    {'detail': f'Email adresiniz doğrulandı! Hoş geldin {user.username}!'}, 
+                    {'detail': _('Your email address has been verified! Welcome {}!').format(user.username)}, 
                     status=status.HTTP_200_OK
                 )
             else:
                 return Response(
-                    {'detail': 'Email adresiniz zaten doğrulanmış'}, 
+                    {'detail': _('Your email address is already verified')}, 
                     status=status.HTTP_200_OK
                 )
         else:
             # Invalid token
             return Response(
-                {'detail': 'Doğrulama linki geçersiz veya süresi dolmuş'}, 
+                {'detail': _('Verification link is invalid or has expired')}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -837,7 +838,7 @@ class ProfileDetailAPIView(APIView):
 
             except Exception as e:
                 return Response(
-                    {'detail': 'Profil güncellemesi sırasında hata oluştu'},
+                    {'detail': _('An error occurred while updating profile')},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils.translation import gettext_lazy as _
 from .models import Post, Comment
 from django_summernote.admin import SummernoteModelAdmin
 
@@ -12,13 +13,13 @@ class PostAdmin(SummernoteModelAdmin):
     summernote_fields = ('content',)
     
     fieldsets = (
-        ('Post Bilgileri', {
+        (_('Post Information'), {
             'fields': ('title', 'content', 'author')
         }),
-        ('Ayarlar', {
+        (_('Settings'), {
             'fields': ('is_published',)
         }),
-        ('Tarihler', {
+        (_('Dates'), {
             'fields': ('created_at', 'updated_at'),
             'classes': ('collapse',)
         }),
@@ -37,4 +38,4 @@ class CommentAdmin(admin.ModelAdmin):
         """Show first 50 characters of content"""
         return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
     
-    content_preview.short_description = 'İçerik Önizleme'
+    content_preview.short_description = _('Content Preview')

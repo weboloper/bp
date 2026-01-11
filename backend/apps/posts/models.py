@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 
 
 class Post(models.Model):
@@ -12,11 +13,11 @@ class Post(models.Model):
         on_delete=models.CASCADE,
         related_name='posts'
     )
-    title = models.CharField(max_length=255, verbose_name="Başlık")
-    content = models.TextField(verbose_name="Gövde")
-    is_published = models.BooleanField(default=True, verbose_name="Yayınlanmış mı?")
-    created_at = models.DateTimeField(auto_now_add=True,verbose_name="Oluşturulma Tarihi")
-    updated_at = models.DateTimeField(auto_now=True,verbose_name="Güncellenme Tarihi")
+    title = models.CharField(max_length=255, verbose_name=_('Title'))
+    content = models.TextField(verbose_name=_('Content'))
+    is_published = models.BooleanField(default=True, verbose_name=_('Is Published'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Updated At'))
 
     class Meta:
         ordering = ['-created_at']
@@ -44,9 +45,9 @@ class Comment(models.Model):
         on_delete=models.CASCADE,
         related_name='comments'
     )
-    content = models.TextField(verbose_name="Gövde")
-    created_at = models.DateTimeField(auto_now_add=True,verbose_name="Oluşturulma Tarihi")
-    updated_at = models.DateTimeField(auto_now=True,verbose_name="Güncellenme Tarihi")
+    content = models.TextField(verbose_name=_('Content'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Updated At'))
 
     class Meta:
         ordering = ['created_at']

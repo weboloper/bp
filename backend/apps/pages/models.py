@@ -1,30 +1,31 @@
 from django.db import models
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils.translation import gettext_lazy as _
 
 
 class Page(models.Model):
-    title = models.CharField(max_length=200, verbose_name="Başlık")
-    slug = models.SlugField(max_length=200, unique=True, verbose_name="URL/Slug")
-    content = models.TextField(verbose_name="Gövde")
+    title = models.CharField(max_length=200, verbose_name=_('Title'))
+    slug = models.SlugField(max_length=200, unique=True, verbose_name=_('URL/Slug'))
+    content = models.TextField(verbose_name=_('Content'))
     parent = models.ForeignKey(
         'self',
         on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name='children',
-        verbose_name="Üst Sayfa"
+        verbose_name=_('Parent Page')
     )
-    
+
     # Ek faydalı alanlar
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
-    is_published = models.BooleanField(default=True, verbose_name="Yayınlanmış mı?")
-    order = models.IntegerField(default=0, verbose_name="Sıralama")
-    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
+    updated_at = models.DateTimeField(auto_now=True, verbose_name=_('Updated At'))
+    is_published = models.BooleanField(default=True, verbose_name=_('Is Published'))
+    order = models.IntegerField(default=0, verbose_name=_('Order'))
+
     class Meta:
-        verbose_name = "Sayfa"
-        verbose_name_plural = "Sayfalar"
+        verbose_name = _('Page')
+        verbose_name_plural = _('Pages')
         ordering = ['order', 'title']
     
     def __str__(self):

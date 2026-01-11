@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django_ratelimit.decorators import ratelimit
 from django_filters import rest_framework as filters
 
@@ -114,7 +115,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
             except Exception as e:
                 return Response(
-                    {'detail': f'Post oluşturulurken bir hata oluştu: {str(e)}'},
+                    {'detail': _('An error occurred while creating the post: %(error)s') % {'error': str(e)}},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
@@ -132,7 +133,7 @@ class PostViewSet(viewsets.ModelViewSet):
         # Permission check (IsOwnerOrReadOnly handles this, but double check)
         if instance.author != request.user and not request.user.is_staff:
             return Response(
-                {'detail': 'Bu post\'u güncelleme yetkiniz yok'},
+                {'detail': _('You do not have permission to update this post')},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -151,7 +152,7 @@ class PostViewSet(viewsets.ModelViewSet):
 
             except Exception as e:
                 return Response(
-                    {'detail': f'Post güncellenirken bir hata oluştu: {str(e)}'},
+                    {'detail': _('An error occurred while updating the post: %(error)s') % {'error': str(e)}},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
@@ -177,7 +178,7 @@ class PostViewSet(viewsets.ModelViewSet):
         # Permission check (IsOwnerOrReadOnly handles this, but double check)
         if instance.author != request.user and not request.user.is_staff:
             return Response(
-                {'detail': 'Bu post\'u silme yetkiniz yok'},
+                {'detail': _('You do not have permission to delete this post')},
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -186,13 +187,13 @@ class PostViewSet(viewsets.ModelViewSet):
             instance.delete()
 
             return Response(
-                {'detail': f'"{post_title}" başlıklı post başarıyla silindi'},
+                {'detail': _('Post "%(title)s" was successfully deleted') % {'title': post_title}},
                 status=status.HTTP_200_OK
             )
 
         except Exception as e:
             return Response(
-                {'detail': f'Post silinirken bir hata oluştu: {str(e)}'},
+                {'detail': _('An error occurred while deleting the post: %(error)s') % {'error': str(e)}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

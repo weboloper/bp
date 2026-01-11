@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 from pages.models import Page
 
 
@@ -72,15 +73,15 @@ class PageSerializer(serializers.ModelSerializer):
         slug = value.strip()
 
         if not slug:
-            raise serializers.ValidationError('Slug gerekli')
+            raise serializers.ValidationError(_('Slug is required'))
 
         # Update işleminde mevcut kaydın slug'ını kontrol etme
         if self.instance:
             if Page.objects.exclude(pk=self.instance.pk).filter(slug=slug).exists():
-                raise serializers.ValidationError('Bu slug zaten kullanılıyor')
+                raise serializers.ValidationError(_('This slug is already in use'))
         else:
             if Page.objects.filter(slug=slug).exists():
-                raise serializers.ValidationError('Bu slug zaten kullanılıyor')
+                raise serializers.ValidationError(_('This slug is already in use'))
 
         return slug
 
@@ -89,11 +90,11 @@ class PageSerializer(serializers.ModelSerializer):
         title = value.strip()
 
         if not title:
-            raise serializers.ValidationError('Başlık gerekli')
+            raise serializers.ValidationError(_('Title is required'))
         if len(title) < 3:
-            raise serializers.ValidationError('Başlık en az 3 karakter olmalı')
+            raise serializers.ValidationError(_('Title must be at least 3 characters'))
         if len(title) > 200:
-            raise serializers.ValidationError('Başlık en fazla 200 karakter olabilir')
+            raise serializers.ValidationError(_('Title must be at most 200 characters'))
 
         return title
 
@@ -102,9 +103,9 @@ class PageSerializer(serializers.ModelSerializer):
         content = value.strip()
 
         if not content:
-            raise serializers.ValidationError('İçerik gerekli')
+            raise serializers.ValidationError(_('Content is required'))
         if len(content) < 10:
-            raise serializers.ValidationError('İçerik en az 10 karakter olmalı')
+            raise serializers.ValidationError(_('Content must be at least 10 characters'))
 
         return content
 
@@ -113,14 +114,14 @@ class PageSerializer(serializers.ModelSerializer):
         if value:
             # Kendisi parent olamaz
             if self.instance and value.id == self.instance.id:
-                raise serializers.ValidationError('Sayfa kendisinin alt sayfası olamaz')
+                raise serializers.ValidationError(_('A page cannot be its own child page'))
 
             # Circular reference kontrolü
             if self.instance:
                 current = value
                 while current:
                     if current.id == self.instance.id:
-                        raise serializers.ValidationError('Circular reference oluşturulması engellenmiştir')
+                        raise serializers.ValidationError(_('Creating a circular reference is not allowed'))
                     current = current.parent
 
         return value
@@ -128,7 +129,7 @@ class PageSerializer(serializers.ModelSerializer):
     def validate_order(self, value):
         """Sıralama validasyonu"""
         if value < 0:
-            raise serializers.ValidationError('Sıralama değeri negatif olamaz')
+            raise serializers.ValidationError(_('Order value cannot be negative'))
         return value
 
 

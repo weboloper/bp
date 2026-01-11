@@ -87,6 +87,8 @@ tmp/
 temp/
 temp_delete*
 REMOVED_*
+.claude/
+
 
 # cPanel specific
 .cpanel/

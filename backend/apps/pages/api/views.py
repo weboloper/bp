@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAdminUser
 from django.utils.decorators import method_decorator
+from django.utils.translation import gettext_lazy as _
 from django_ratelimit.decorators import ratelimit
 from django_filters import rest_framework as filters
 
@@ -103,7 +104,7 @@ class PageViewSet(viewsets.ModelViewSet):
 
             except Exception as e:
                 return Response(
-                    {'detail': f'Sayfa oluşturulurken bir hata oluştu: {str(e)}'},
+                    {'detail': _('An error occurred while creating the page: %(error)s') % {'error': str(e)}},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
@@ -132,7 +133,7 @@ class PageViewSet(viewsets.ModelViewSet):
 
             except Exception as e:
                 return Response(
-                    {'detail': f'Sayfa güncellenirken bir hata oluştu: {str(e)}'},
+                    {'detail': _('An error occurred while updating the page: %(error)s') % {'error': str(e)}},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
 
@@ -160,13 +161,13 @@ class PageViewSet(viewsets.ModelViewSet):
             instance.delete()
 
             return Response(
-                {'detail': f'"{page_title}" sayfası başarıyla silindi'},
+                {'detail': _('Page "%(title)s" was successfully deleted') % {'title': page_title}},
                 status=status.HTTP_200_OK
             )
 
         except Exception as e:
             return Response(
-                {'detail': f'Sayfa silinirken bir hata oluştu: {str(e)}'},
+                {'detail': _('An error occurred while deleting the page: %(error)s') % {'error': str(e)}},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 

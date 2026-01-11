@@ -5,6 +5,7 @@ from django.core.validators import validate_email
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
 from accounts.utils import validate_alphanumeric_username
 from django.contrib.auth.models import update_last_login
 
@@ -41,39 +42,39 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         username = value.strip()
         if not username:
-            raise serializers.ValidationError('Kullanıcı adı gerekli')
+            raise serializers.ValidationError(_('Username is required'))
         if len(username) < 3:
-            raise serializers.ValidationError('Kullanıcı adı en az 3 karakter olmalı')
+            raise serializers.ValidationError(_('Username must be at least 3 characters'))
         if len(username) > 30:
-            raise serializers.ValidationError('Kullanıcı adı en fazla 30 karakter olabilir')
+            raise serializers.ValidationError(_('Username must be at most 30 characters'))
         try:
             validate_alphanumeric_username(username)
         except ValidationError as e:
             raise serializers.ValidationError(str(e.message))
         if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError('Bu kullanıcı adı zaten alınmış')
+            raise serializers.ValidationError(_('This username is already taken'))
         return username
     
     def validate_email(self, value):
         email = value.strip()
         if not email:
-            raise serializers.ValidationError('Email gerekli')
+            raise serializers.ValidationError(_('Email is required'))
         try:
             validate_email(email)
         except ValidationError:
-            raise serializers.ValidationError('Geçerli bir email adresi giriniz')
+            raise serializers.ValidationError(_('Enter a valid email address'))
         if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError('Bu email adresi zaten kayıtlı')
+            raise serializers.ValidationError(_('This email address is already registered'))
         return email
     
     def validate_password1(self, value):
         if not value:
-            raise serializers.ValidationError('Şifre gerekli')
+            raise serializers.ValidationError(_('Password is required'))
         return value
     
     def validate_password2(self, value):
         if not value:
-            raise serializers.ValidationError('Şifre tekrarı gerekli')
+            raise serializers.ValidationError(_('Password confirmation is required'))
         return value
     
     def validate(self, attrs):
@@ -84,7 +85,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         
         if password1 and password2:
             if password1 != password2:
-                raise serializers.ValidationError({'password2': 'Şifreler eşleşmiyor'})
+                raise serializers.ValidationError({'password2': _('Passwords do not match')})
         
         if password1 and username and email:
             temp_user = User(username=username, email=email)
@@ -108,7 +109,7 @@ class PasswordResetSerializer(serializers.Serializer):
     def validate_email(self, value):
         email = value.strip()
         if not email:
-            raise serializers.ValidationError('Email adresi gerekli')
+            raise serializers.ValidationError(_('Email address is required'))
         return email
     
     def get_user(self):
@@ -133,7 +134,7 @@ class PasswordSetSerializer(serializers.Serializer):
 
     def validate_new_password1(self, value):
         if not value:
-            raise serializers.ValidationError('Yeni şifre gerekli')
+            raise serializers.ValidationError(_('New password is required'))
         if self.user:
             try:
                 validate_password(value, self.user)
@@ -143,7 +144,7 @@ class PasswordSetSerializer(serializers.Serializer):
 
     def validate_new_password2(self, value):
         if not value:
-            raise serializers.ValidationError('Yeni şifre tekrarı gerekli')
+            raise serializers.ValidationError(_('New password confirmation is required'))
         return value
 
     def validate(self, attrs):
@@ -152,7 +153,7 @@ class PasswordSetSerializer(serializers.Serializer):
 
         if new_password1 and new_password2:
             if new_password1 != new_password2:
-                raise serializers.ValidationError({'new_password2': 'Şifreler eşleşmiyor'})
+                raise serializers.ValidationError({'new_password2': _('Passwords do not match')})
         return attrs
 
     def save(self):
@@ -179,14 +180,14 @@ class PasswordChangeSerializer(serializers.Serializer):
 
     def validate_current_password(self, value):
         if not value:
-            raise serializers.ValidationError('Mevcut şifre gerekli')
+            raise serializers.ValidationError(_('Current password is required'))
         if self.user and not self.user.check_password(value):
-            raise serializers.ValidationError('Mevcut şifre yanlış')
+            raise serializers.ValidationError(_('Current password is incorrect'))
         return value
 
     def validate_new_password1(self, value):
         if not value:
-            raise serializers.ValidationError('Yeni şifre gerekli')
+            raise serializers.ValidationError(_('New password is required'))
         if self.user:
             try:
                 validate_password(value, self.user)
@@ -196,7 +197,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
     def validate_new_password2(self, value):
         if not value:
-            raise serializers.ValidationError('Yeni şifre tekrarı gerekli')
+            raise serializers.ValidationError(_('New password confirmation is required'))
         return value
 
     def validate(self, attrs):
@@ -206,11 +207,11 @@ class PasswordChangeSerializer(serializers.Serializer):
 
         if new_password1 and new_password2:
             if new_password1 != new_password2:
-                raise serializers.ValidationError({'new_password2': 'Yeni şifreler eşleşmiyor'})
+                raise serializers.ValidationError({'new_password2': _('New passwords do not match')})
 
         if current_password and new_password1:
             if current_password == new_password1:
-                raise serializers.ValidationError({'new_password1': 'Yeni şifre mevcut şifre ile aynı olamaz'})
+                raise serializers.ValidationError({'new_password1': _('New password cannot be the same as current password')})
         return attrs
 
     def save(self):
@@ -228,14 +229,14 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['username'].help_text = 'Username veya email adresi giriniz'
+        self.fields['username'].help_text = _('Enter your username or email address')
     
     def validate(self, attrs):
         username_or_email = attrs.get('username')
         password = attrs.get('password')
         
         if not username_or_email or not password:
-            raise serializers.ValidationError('Kullanıcı adı/email ve şifre gerekli')
+            raise serializers.ValidationError(_('Username/email and password are required'))
         
         username_to_authenticate = username_or_email
         
@@ -246,9 +247,9 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     user_obj = User.objects.get(email__iexact=username_or_email)
                     username_to_authenticate = user_obj.username
                 except User.DoesNotExist:
-                    raise serializers.ValidationError('Bu email adresi ile kayıtlı kullanıcı bulunamadı')
+                    raise serializers.ValidationError(_('No user found with this email address'))
             except ValidationError:
-                raise serializers.ValidationError('Geçerli bir email adresi giriniz')
+                raise serializers.ValidationError(_('Enter a valid email address'))
         
         user = authenticate(
             request=self.context.get('request'),
@@ -258,12 +259,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         
         if user is None:
             if '@' in username_or_email:
-                raise serializers.ValidationError('Email veya şifre hatalı')
+                raise serializers.ValidationError(_('Email or password is incorrect'))
             else:
-                raise serializers.ValidationError('Kullanıcı adı veya şifre hatalı')
+                raise serializers.ValidationError(_('Username or password is incorrect'))
         
         if not user.is_active:
-            raise serializers.ValidationError('Hesabınız devre dışı bırakılmış')
+            raise serializers.ValidationError(_('Your account has been disabled'))
         
         # if not user.is_verified:
         #     raise serializers.ValidationError('Hesabınız henüz doğrulanmamış. Email adresinizi kontrol edin.')
@@ -290,21 +291,21 @@ class UsernameChangeSerializer(serializers.Serializer):
     
     def validate_current_password(self, value):
         if not value:
-            raise serializers.ValidationError('Mevcut şifrenizi girin')
+            raise serializers.ValidationError(_('Enter your current password'))
         if self.user and not self.user.check_password(value):
-            raise serializers.ValidationError('Mevcut şifre yanlış')
+            raise serializers.ValidationError(_('Current password is incorrect'))
         return value
     
     def validate_new_username(self, value):
         new_username = value.strip()
         if not new_username:
-            raise serializers.ValidationError('Yeni kullanıcı adı gerekli')
+            raise serializers.ValidationError(_('New username is required'))
         if len(new_username) < 3:
             raise serializers.ValidationError('Kullanıcı adı en az 3 karakter olmalı')
         if len(new_username) > 30:
             raise serializers.ValidationError('Kullanıcı adı en fazla 30 karakter olabilir')
         if self.user and new_username.lower() == self.user.username.lower():
-            raise serializers.ValidationError('Yeni kullanıcı adı mevcut kullanıcı adı ile aynı olamaz')
+            raise serializers.ValidationError(_('New username cannot be the same as current username'))
         try:
             validate_alphanumeric_username(new_username)
         except ValidationError as e:
@@ -333,19 +334,19 @@ class EmailChangeSerializer(serializers.Serializer):
     
     def validate_current_password(self, value):
         if not value:
-            raise serializers.ValidationError('Mevcut şifrenizi girin')
+            raise serializers.ValidationError(_('Enter your current password'))
         if self.user and not self.user.check_password(value):
-            raise serializers.ValidationError('Mevcut şifre yanlış')
+            raise serializers.ValidationError(_('Current password is incorrect'))
         return value
     
     def validate_new_email(self, value):
         new_email = value.strip().lower()
         if not new_email:
-            raise serializers.ValidationError('Yeni email adresi gerekli')
+            raise serializers.ValidationError(_('New email address is required'))
         if self.user and new_email == self.user.email.lower():
-            raise serializers.ValidationError('Yeni email adresi mevcut email ile aynı olamaz')
+            raise serializers.ValidationError(_('New email address cannot be the same as current email'))
         if User.objects.filter(email__iexact=new_email).exists():
-            raise serializers.ValidationError('Bu email adresi zaten kullanılıyor')
+            raise serializers.ValidationError(_('This email address is already in use'))
         return new_email
 
 
@@ -364,19 +365,19 @@ class ProfileUpdateSerializer(serializers.Serializer):
     def validate_first_name(self, value):
         first_name = value.strip() if value else ''
         if len(first_name) > 30:
-            raise serializers.ValidationError('Ad en fazla 30 karakter olabilir')
+            raise serializers.ValidationError(_('First name must be at most 30 characters'))
         return first_name
     
     def validate_last_name(self, value):
         last_name = value.strip() if value else ''
         if len(last_name) > 30:
-            raise serializers.ValidationError('Soyad en fazla 30 karakter olabilir')
+            raise serializers.ValidationError(_('Last name must be at most 30 characters'))
         return last_name
     
     def validate_bio(self, value):
         bio = value.strip() if value else ''
         if len(bio) > 500:
-            raise serializers.ValidationError('Bio en fazla 500 karakter olabilir')
+            raise serializers.ValidationError(_('Bio must be at most 500 characters'))
         return bio
     
     def save(self):
@@ -414,7 +415,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     
     def validate_password1(self, value):
         if not value:
-            raise serializers.ValidationError('Yeni şifre gerekli')
+            raise serializers.ValidationError(_('New password is required'))
         if self.user:
             try:
                 validate_password(value, self.user)
@@ -424,7 +425,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
     
     def validate_password2(self, value):
         if not value:
-            raise serializers.ValidationError('Şifre tekrarı gerekli')
+            raise serializers.ValidationError(_('Password confirmation is required'))
         return value
     
     def validate(self, attrs):
@@ -432,7 +433,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         password2 = attrs.get('password2')
         if password1 and password2:
             if password1 != password2:
-                raise serializers.ValidationError({'password2': 'Şifreler eşleşmiyor'})
+                raise serializers.ValidationError({'password2': _('Passwords do not match')})
         return attrs
     
     def save(self):
@@ -451,7 +452,7 @@ class EmailVerificationResendSerializer(serializers.Serializer):
     def validate_email(self, value):
         email = value.strip()
         if not email:
-            raise serializers.ValidationError('Email adresi gerekli')
+            raise serializers.ValidationError(_('Email address is required'))
         return email
 
     def get_user(self):
