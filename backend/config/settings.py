@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 import sys
 from pathlib import Path
+from datetime import timedelta
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,95 +22,70 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # apps/ klasörünü Python path'ine ekle
 sys.path.insert(0, str(BASE_DIR / 'apps'))
 
-# Environment variables
+
+# =============================================================================
+# ENVIRONMENT CONFIGURATION
+# =============================================================================
+
 env = environ.Env(
     DEBUG=(bool, True),
     SECRET_KEY=(str, 'django-insecure-change-this-in-production'),
     DATABASE_URL=(str, ''),
-    USE_ASYNC_EMAIL=(bool, False),
 )
 
-# Environment setup - Docker vs cPanel with multi-env support
-# print(f"BASE_DIR: {BASE_DIR}")
-# print(f"Raw env DEBUG: {os.environ.get('DEBUG', 'NOT_SET')}")
+# Environment detection: Docker (env vars) vs cPanel (.env files)
+if 'DEBUG' not in os.environ:
+    env_type = os.environ.get('DJANGO_ENV', 'development')
+    env_file = {
+        'staging': '.env.staging',
+        'production': '.env.prod',
+    }.get(env_type, '.env')
 
-# İlk olarak environment variables'lara bak (Docker)
-if 'DEBUG' in os.environ:
-    # print("Using environment variables (Docker mode)")
-    pass
-else:
-    # .env dosyasını dene (cPanel mode)
-    # Ortam tipini belirle
-    env_type = os.environ.get('DJANGO_ENV', 'development')  # development, staging, production
-    
-    # Ortama göre doğru .env dosyasını seç
-    if env_type == 'staging':
-        env_file = '.env.staging'
-    elif env_type == 'production':
-        env_file = '.env.prod'
-    else:
-        env_file = '.env'  # development
-    
-    # .env dosyasını ara (parent directory'den başla)
-    parent_env_path = BASE_DIR.parent / env_file
-    backend_env_path = BASE_DIR / env_file
-    
-    # print(f"Looking for env file: {env_file}")
-    # print(f"Parent .env path: {parent_env_path}")
-    # print(f"Backend .env path: {backend_env_path}")
-    
-    if parent_env_path.exists():
-        environ.Env.read_env(parent_env_path)
-        # print(f"{env_file} loaded from parent directory (cPanel mode)")
-    elif backend_env_path.exists():
-        environ.Env.read_env(backend_env_path)
-        # print(f"{env_file} loaded from backend directory (cPanel mode)")
-    else:
-        # Fallback to .env if specific env file not found
-        fallback_parent = BASE_DIR.parent / '.env'
-        fallback_backend = BASE_DIR / '.env'
-        
-        if fallback_parent.exists():
-            environ.Env.read_env(fallback_parent)
-            # print("Fallback: .env loaded from parent directory")
-        elif fallback_backend.exists():
-            environ.Env.read_env(fallback_backend)
-            # print("Fallback: .env loaded from backend directory")
-        else:
-            pass
-            # print("No .env file found - using defaults")
+    # Try parent directory first, then backend directory
+    for env_path in [BASE_DIR.parent / env_file, BASE_DIR / env_file,
+                     BASE_DIR.parent / '.env', BASE_DIR / '.env']:
+        if env_path.exists():
+            environ.Env.read_env(env_path)
+            break
+
+CURRENT_ENV = env('DJANGO_ENV', default='development')
+
+
+# =============================================================================
+# CORE DJANGO SETTINGS
+# =============================================================================
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
-# print(f"Final DEBUG value: {DEBUG}")
-# print(f"DEBUG type: {type(DEBUG)}")
 
-# ALLOWED_HOSTS configuration
+# Allowed hosts
 if DEBUG:
     ALLOWED_HOSTS = ['*']
 else:
-    # Production/Staging - sadece belirli host'lara izin ver
     allowed_hosts_str = env('ALLOWED_HOSTS', default='localhost,127.0.0.1')
     ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_str.split(',')]
-    
-    # Domain varsa ekle
     domain = env('DOMAIN', default='')
     if domain and domain not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(domain)
 
-# Application definition
+
+# =============================================================================
+# APPLICATION DEFINITION
+# =============================================================================
+
 INSTALLED_APPS = [
+    # Django core
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third party apps
+
+    # Third party
     'rest_framework',
     'rest_framework_simplejwt.token_blacklist',
     'corsheaders',
@@ -118,37 +94,28 @@ INSTALLED_APPS = [
     'django_summernote',
     'django_filters',
     'drf_spectacular',
-    
+
     # Local apps
     'core',
     'accounts',
+    'providers',
+    'notifications',
     'pages',
     'posts',
-    
 ]
-
-# Static Files Handler - defaults to 'django' in DEBUG mode, 'caddy' in production
-# Options: 'django', 'whitenoise', 's3', 'caddy', 'nginx'
-STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='django' if DEBUG else 'caddy')
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-]
-
-# WhiteNoise middleware'i sadece whitenoise handler için ekle
-if STATIC_FILES_HANDLER == 'whitenoise':
-    MIDDLEWARE.append('whitenoise.middleware.WhiteNoiseMiddleware')
-
-MIDDLEWARE.extend([
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.locale.LocaleMiddleware',  # Dil algılama için
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.TenantMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-])
+]
 
 ROOT_URLCONF = 'config.urls'
 
@@ -170,17 +137,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
+
+# =============================================================================
+# DATABASE
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+# =============================================================================
 
 if env('DATABASE_URL'):
-    # Use dj-database-url for flexible database configuration
     import dj_database_url
-    DATABASES = {
-        'default': dj_database_url.parse(env('DATABASE_URL'))
-    }
+    DATABASES = {'default': dj_database_url.parse(env('DATABASE_URL'))}
 else:
-    # Fallback to SQLite for development
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -188,24 +154,31 @@ else:
         }
     }
 
-# Password validation
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+
+# =============================================================================
+# AUTHENTICATION
+# =============================================================================
+
+AUTH_USER_MODEL = 'accounts.User'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
-# Internationalization
-LANGUAGE_CODE = 'tr'  # Default dil Türkçe
+AUTH_PASSWORD_VALIDATORS = [
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
+]
+
+
+# =============================================================================
+# INTERNATIONALIZATION
+# https://docs.djangoproject.com/en/5.2/topics/i18n/
+# =============================================================================
+
+LANGUAGE_CODE = 'tr'
 LANGUAGES = [
     ('tr', 'Türkçe'),
     ('en', 'English'),
@@ -216,83 +189,155 @@ USE_I18N = True
 USE_L10N = True
 USE_TZ = True
 
-# Çeviri dosyalarının konumu
-LOCALE_PATHS = [
-    BASE_DIR / 'locale',
-]
+LOCALE_PATHS = [BASE_DIR / 'locale']
 
-# Static files (CSS, JavaScript, Images)
+
+# =============================================================================
+# STATIC & MEDIA FILES
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+# =============================================================================
+
 STATIC_URL = '/static/'
-
-# Static files directories (your app's static files)
-STATICFILES_DIRS = []
-if (BASE_DIR / 'static').exists():
-    STATICFILES_DIRS.append(BASE_DIR / 'static')
-
-# Static root - where collectstatic puts files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static'] if (BASE_DIR / 'static').exists() else []
 
-# Static Files Storage Configuration (STATIC_FILES_HANDLER defined above)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Static files handler: django, whitenoise, s3, caddy, nginx
+STATIC_FILES_HANDLER = env('STATIC_FILES_HANDLER', default='django' if DEBUG else 'caddy')
+
 if STATIC_FILES_HANDLER == 'whitenoise':
-    # WhiteNoise Configuration (cPanel için)
+    MIDDLEWARE.insert(2, 'whitenoise.middleware.WhiteNoiseMiddleware')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
-    # WhiteNoise ayarları
     WHITENOISE_USE_FINDERS = True
     WHITENOISE_AUTOREFRESH = DEBUG
-    WHITENOISE_MAX_AGE = 86400  # 1 day cache
-
-    # Compression settings
-    if not DEBUG:
-        WHITENOISE_SKIP_COMPRESS_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'zip', 'gz', 'tgz', 'bz2', 'tbz', 'xz', 'br']
-        WHITENOISE_MIMETYPES = {
-            '.js': 'application/javascript',
-            '.css': 'text/css',
-        }
+    WHITENOISE_MAX_AGE = 86400
 
 elif STATIC_FILES_HANDLER == 's3':
-    # AWS S3 Configuration
     STATICFILES_STORAGE = 'storages.backends.s3boto3.S3StaticStorage'
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'  # Media files
-
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = env('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = env('AWS_S3_REGION_NAME', default='us-east-1')
-
-    # CloudFront domain (opsiyonel)
     AWS_S3_CUSTOM_DOMAIN = env('AWS_S3_CUSTOM_DOMAIN', default=None)
-    if AWS_S3_CUSTOM_DOMAIN:
-        AWS_S3_URL_PROTOCOL = 'https:'
-        STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
-    else:
-        STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/static/'
-        MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/media/'
-
     AWS_DEFAULT_ACL = env('AWS_DEFAULT_ACL', default='public-read')
-    AWS_S3_OBJECT_PARAMETERS = {
-        'CacheControl': env('AWS_S3_OBJECT_PARAMETERS_CacheControl', default='max-age=86400'),
-    }
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
     AWS_S3_FILE_OVERWRITE = False
     AWS_QUERYSTRING_AUTH = False
-
+    if AWS_S3_CUSTOM_DOMAIN:
+        STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+        MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
 else:
-    # Default: Django, Caddy, Nginx, Apache - all use StaticFilesStorage
-    # Static files are served by the web server or Django's staticfiles app (in DEBUG mode)
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
-# Media files (uploads)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
+# =============================================================================
+# DEFAULT PRIMARY KEY
+# =============================================================================
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom User Model
-AUTH_USER_MODEL = 'accounts.User'
 
-# Django REST Framework
+# =============================================================================
+# REDIS, CACHE & CELERY
+# =============================================================================
+
+def _check_redis():
+    """Check Redis connection availability"""
+    try:
+        import redis
+        redis_url = env('REDIS_URL', default='redis://redis:6379/0')
+        if redis_url.startswith('redis://'):
+            parts = redis_url.replace('redis://', '').split(':')
+            host = parts[0]
+            port_db = parts[1].split('/')
+            port = int(port_db[0])
+            db = int(port_db[1]) if len(port_db) > 1 else 0
+        else:
+            host, port, db = 'localhost', 6379, 0
+        redis.Redis(host=host, port=port, db=db, socket_timeout=2).ping()
+        return True
+    except Exception:
+        return False
+
+REDIS_AVAILABLE = _check_redis()
+
+# Cache
+if REDIS_AVAILABLE:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': env('REDIS_URL', default='redis://redis:6379/1'),
+            'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'}
+        }
+    }
+else:
+    cache_backend = env('FALLBACK_CACHE_BACKEND', default='dummy')
+    CACHES = {
+        'default': {
+            'BACKEND': {
+                'database': 'django.core.cache.backends.db.DatabaseCache',
+                'locmem': 'django.core.cache.backends.locmem.LocMemCache',
+            }.get(cache_backend, 'django.core.cache.backends.dummy.DummyCache'),
+            'LOCATION': 'django_cache_table' if cache_backend == 'database' else 'unique-snowflake',
+        }
+    }
+
+# Celery
+CELERY_ENABLED = REDIS_AVAILABLE and env.bool('CELERY_ENABLED', default=False)
+
+if REDIS_AVAILABLE:
+    CELERY_BROKER_URL = env('REDIS_URL', default='redis://redis:6379/0')
+    CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://redis:6379/0')
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_TIMEZONE = TIME_ZONE
+
+
+# =============================================================================
+# SECURITY (Production)
+# =============================================================================
+
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 86400
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    # SECURE_SSL_REDIRECT = True
+    # SESSION_COOKIE_SECURE = True
+    # CSRF_COOKIE_SECURE = True
+
+
+# =============================================================================
+# CORS
+# =============================================================================
+
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
+
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+    ]
+else:
+    domain = env('DOMAIN', default='yourdomain.com')
+    CORS_ALLOWED_ORIGINS = [
+        f"https://{domain}",
+        f"https://www.{domain}",
+    ]
+
+CORS_ALLOW_CREDENTIALS = True
+
+
+# =============================================================================
+# REST FRAMEWORK & JWT
+# =============================================================================
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -307,268 +352,134 @@ REST_FRAMEWORK = {
         'django_filters.rest_framework.DjangoFilterBackend',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-
-    # ✅ SECURITY: Rate Limiting to prevent abuse and brute-force attacks
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
         'rest_framework.throttling.ScopedRateThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        # General rate limits
-        'anon': '100/hour',           # Anonymous users: 100 requests per hour
-        'user': '1000/hour',          # Authenticated users: 1000 requests per hour
-
-        # Authentication endpoints (stricter limits to prevent brute-force)
-        'login': '10/hour',           # Login attempts: 10 per hour
-        'register': '5/hour',         # Registration: 5 per hour
-        'password_reset': '3/hour',   # Password reset requests: 3 per hour
-        'email_verify': '5/hour',     # Email verification resends: 5 per hour
-        'token_refresh': '20/hour',   # Token refresh: 20 per hour
-
-        # Social auth (prevent OAuth abuse)
-        'social_auth': '10/hour',     # Social login attempts: 10 per hour
-
-        # SMS endpoints (prevent SMS bombing)
-
-        # Sensitive operations
-
+        'anon': '100/hour',
+        'user': '1000/hour',
+        'login': '10/hour',
+        'register': '5/hour',
+        'password_reset': '3/hour',
+        'email_verify': '5/hour',
+        'token_refresh': '20/hour',
+        'social_auth': '10/hour',
     },
 }
 
-# Django Simple JWT Settings
-from datetime import timedelta
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
-    
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
-    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
-    
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
-    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
-    
-    'JTI_CLAIM': 'jti',
-    
-    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
 
-# CORS Settings
-# withCredentials: true kullanıldığında CORS_ALLOW_ALL_ORIGINS çalışmaz
-# Explicit origins kullanmalıyız
-if DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-    ]
-else:
-    CORS_ALLOWED_ORIGINS = [
-        f"https://{env('DOMAIN', default='yourdomain.com')}",
-        f"https://www.{env('DOMAIN', default='yourdomain.com')}",
-    ]
 
-# Cookie-based auth için gerekli
-CORS_ALLOW_CREDENTIALS = True
+# =============================================================================
+# EMAIL & NOTIFICATION PROVIDERS
+# =============================================================================
 
-# Redis Health Check Function
-def check_redis_connection():
-    """Redis bağlantısını kontrol et"""
-    try:
-        import redis
-        redis_url = env('REDIS_URL', default='redis://redis:6379/0')
+# Provider selection
+EMAIL_PROVIDER = env('EMAIL_PROVIDER', default='mock')  # smtp, sendgrid, mock
+SMS_PROVIDER = env('SMS_PROVIDER', default='mock')      # netgsm, twilio, mock
 
-        # Parse Redis URL
-        if redis_url.startswith('redis://'):
-            # redis://redis:6379/0 formatı
-            parts = redis_url.replace('redis://', '').split(':')
-            host = parts[0]
-            port_db = parts[1].split('/')
-            port = int(port_db[0])
-            db = int(port_db[1]) if len(port_db) > 1 else 0
-        else:
-            host, port, db = 'localhost', 6379, 0
-
-        r = redis.Redis(host=host, port=port, db=db, socket_timeout=2)
-        r.ping()
-        print(f"[OK] Redis connection successful: {host}:{port}/{db}")
-        return True
-    except Exception as e:
-        print(f"[WARNING] Redis connection failed: {e}")
-        return False
-
-# Redis durumunu kontrol et
-REDIS_AVAILABLE = check_redis_connection()
-
-# Celery Configuration
-if REDIS_AVAILABLE:
-    CELERY_BROKER_URL = env('REDIS_URL', default='redis://redis:6379/0')
-    CELERY_RESULT_BACKEND = env('REDIS_URL', default='redis://redis:6379/0')
-    CELERY_ACCEPT_CONTENT = ['json']
-    CELERY_TASK_SERIALIZER = 'json'
-    CELERY_RESULT_SERIALIZER = 'json'
-    CELERY_TIMEZONE = TIME_ZONE
-    print("[INFO] Celery configured with Redis")
-else:
-    print("[INFO] Celery disabled - Redis not available")
-
-# Cache Configuration
-if REDIS_AVAILABLE:
-    # Redis Cache
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': env('REDIS_URL', default='redis://redis:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            }
-        }
-    }
-    print("[INFO] Redis cache enabled")
-else:
-    # Fallback cache (you can choose: dummy, database, or locmem)
-    cache_backend = env('FALLBACK_CACHE_BACKEND', default='dummy')  # dummy, database, locmem
-
-    if cache_backend == 'database':
-        CACHES = {
-            'default': {
-                'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
-                'LOCATION': 'django_cache_table',
-            }
-        }
-        print("[INFO] Database cache enabled")
-    elif cache_backend == 'locmem':
-        CACHES = {
-            'default': {
-                'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-                'LOCATION': 'unique-snowflake',
-            }
-        }
-        print("[INFO] Local memory cache enabled")
-    else:
-        CACHES = {
-            'default': {
-                'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
-            }
-        }
-        print("[INFO] Dummy cache enabled (development)")
-
-# Security settings for production
-if not DEBUG:
-    SECURE_BROWSER_XSS_FILTER = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    X_FRAME_OPTIONS = 'DENY'
-    SECURE_HSTS_SECONDS = 86400
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    
-    # Only enable if using HTTPS
-    # SECURE_SSL_REDIRECT = True
-    # SESSION_COOKIE_SECURE = True
-    # CSRF_COOKIE_SECURE = True
-
-# Environment-specific settings
-CURRENT_ENV = env('DJANGO_ENV', default='development')
-
-# Frontend URL Configuration
-FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')
-
-# Sentry Configuration
-SENTRY_DSN = env('SENTRY_DSN', default=None)
-# if SENTRY_DSN and not DEBUG:
-#     import sentry_sdk
-#     from sentry_sdk.integrations.django import DjangoIntegration
-#     from sentry_sdk.integrations.celery import CeleryIntegration
-#     from sentry_sdk.integrations.redis import RedisIntegration
-    
-#     sentry_sdk.init(
-#         dsn=SENTRY_DSN,
-#         integrations=[
-#             DjangoIntegration(auto_enabling=True),
-#             CeleryIntegration(auto_enabling=True),
-#             RedisIntegration(),
-#         ],
-#         traces_sample_rate=0.1,
-#         send_default_pii=True,
-#         environment=CURRENT_ENV,
-#         release=env('APP_VERSION', default='1.0.0'),
-#     )
-
-# Email Configuration - Redis durumuna göre
-USE_ASYNC_EMAIL = REDIS_AVAILABLE and env('USE_ASYNC_EMAIL', default=False)
-print(f"[INFO] Async email: {'Enabled' if USE_ASYNC_EMAIL else 'Disabled'}")
-
-# Email backend configuration
-if DEBUG and not env('EMAIL_HOST_USER', default=''):
+# Email backend (based on provider)
+if EMAIL_PROVIDER == 'mock':
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    print("[INFO] Using console email backend (development)")
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    print("[INFO] Using SMTP email backend")
+elif EMAIL_PROVIDER == 'sendgrid':
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.SMTPBackend'
+else:  # smtp
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.SMTPBackend'
 
-# Email Settings (Universal - works with any SMTP provider)
+# SMTP settings (used when EMAIL_PROVIDER=smtp)
 EMAIL_HOST = env('EMAIL_HOST', default='localhost')
-EMAIL_PORT = env('EMAIL_PORT', default=587)
-EMAIL_USE_TLS = env('EMAIL_USE_TLS', default=True)
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@example.com')
 
-# Email backend artık yukarıda Redis durumuna göre ayarlandı
+# SendGrid (used when EMAIL_PROVIDER=sendgrid)
+SENDGRID_API_KEY = env('SENDGRID_API_KEY', default='')
 
-if CURRENT_ENV == 'staging':
-    # Staging specific settings
-    print("Running in STAGING mode")
-    pass
-elif CURRENT_ENV == 'production':
-    # Production specific settings  
-    print("Running in PRODUCTION mode")
-    pass
-else:
-    # Development specific settings
-    print("Running in DEVELOPMENT mode")
-    pass
+# NetGSM (used when SMS_PROVIDER=netgsm)
+NETGSM_USERNAME = env('NETGSM_USERNAME', default='')
+NETGSM_PASSWORD = env('NETGSM_PASSWORD', default='')
+NETGSM_HEADER = env('NETGSM_HEADER', default='')
 
-# Minimal configuration - sadece backend API için kullanacağız
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-)
+# Twilio (used when SMS_PROVIDER=twilio)
+TWILIO_ACCOUNT_SID = env('TWILIO_ACCOUNT_SID', default='')
+TWILIO_AUTH_TOKEN = env('TWILIO_AUTH_TOKEN', default='')
+TWILIO_FROM_NUMBER = env('TWILIO_FROM_NUMBER', default='')
 
-# Google OAuth credentials
+# Push Notifications (FCM)
+FCM_SERVER_KEY = env('FCM_SERVER_KEY', default='')
+
+
+# =============================================================================
+# OAUTH PROVIDERS
+# =============================================================================
+
+# Google
 GOOGLE_OAUTH2_CLIENT_ID = env('GOOGLE_OAUTH2_CLIENT_ID', default='')
 GOOGLE_OAUTH2_CLIENT_SECRET = env('GOOGLE_OAUTH2_CLIENT_SECRET', default='')
 
-# Facebook OAuth credentials
+# Facebook
 FACEBOOK_APP_ID = env('FACEBOOK_APP_ID', default='')
 FACEBOOK_APP_SECRET = env('FACEBOOK_APP_SECRET', default='')
 
-# Apple OAuth credentials
-APPLE_CLIENT_ID = env('APPLE_CLIENT_ID', default='')  # Service ID (Bundle ID)
-APPLE_SECRET = env('APPLE_SECRET', default='')  # Client Secret (opsiyonel)
-APPLE_KEY_ID = env('APPLE_KEY_ID', default='')  # Key ID
-APPLE_TEAM_ID = env('APPLE_TEAM_ID', default='')  # Apple Team ID
+# Apple
+APPLE_CLIENT_ID = env('APPLE_CLIENT_ID', default='')
+APPLE_SECRET = env('APPLE_SECRET', default='')
+APPLE_KEY_ID = env('APPLE_KEY_ID', default='')
+APPLE_TEAM_ID = env('APPLE_TEAM_ID', default='')
 
-# Django Summernote Configuration
+
+# =============================================================================
+# PAYMENT GATEWAY
+# =============================================================================
+
+IYZICO_API_KEY = env('IYZICO_API_KEY', default='sandbox-api-key')
+IYZICO_SECRET_KEY = env('IYZICO_SECRET_KEY', default='sandbox-secret-key')
+IYZICO_TEST_MODE = env.bool('IYZICO_TEST_MODE', default=DEBUG)
+
+
+# =============================================================================
+# MONITORING
+# =============================================================================
+
+SENTRY_DSN = env('SENTRY_DSN', default='')
+APP_VERSION = env('APP_VERSION', default='1.0.0')
+
+# Uncomment to enable Sentry
+# if SENTRY_DSN and not DEBUG:
+#     import sentry_sdk
+#     from sentry_sdk.integrations.django import DjangoIntegration
+#     sentry_sdk.init(
+#         dsn=SENTRY_DSN,
+#         integrations=[DjangoIntegration()],
+#         traces_sample_rate=0.1,
+#         environment=CURRENT_ENV,
+#         release=APP_VERSION,
+#     )
+
+
+# =============================================================================
+# THIRD-PARTY APPS
+# =============================================================================
+
+# Django Summernote (Rich Text Editor)
 SUMMERNOTE_CONFIG = {
-    # Using Bootstrap 4
     'summernote': {
-        # Change editor size
-        # 'width': '100%',
         'height': '480',
-
-        # Use proper toolbar
         'toolbar': [
             ['style', ['style']],
             ['font', ['bold', 'underline', 'clear']],
@@ -579,52 +490,69 @@ SUMMERNOTE_CONFIG = {
             ['insert', ['link', 'picture', 'video']],
             ['view', ['fullscreen', 'codeview', 'help']],
         ],
-
-        # Set language to Turkish
         'lang': 'tr-TR',
     },
-
-    # You can put custom css/js in these lists
-    'css': (),
-    'css_for_inplace': (),
-    'js': (),
-    'js_for_inplace': (),
-
-    # Require user to be authenticated for uploading attachments.
     'attachment_require_authentication': True,
-    
-    # Set to `True` to use FileField instead of ImageField for attachments
     'attachment_filesize_limit': 1024 * 1024 * 10,  # 10MB
-
-    # Set to `True` to use absolute URLs for attachments
     'attachment_absolute_uri': False,
+}
 
-    # Disable uploads
-    'disable_upload': False,
 
-    # Iframe configuration
-    'iframe': True,
+# =============================================================================
+# LOGGING
+# =============================================================================
 
-    # You can add custom toolbar buttons
-    'popover': {
-        'image': [
-            ['image', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
-            ['float', ['floatLeft', 'floatRight', 'floatNone']],
-            ['remove', ['removeMedia']]
-        ],
-        'link': [
-            ['link', ['linkDialogShow', 'unlink']]
-        ],
-        'table': [
-            ['add', ['addRowDown', 'addRowUp', 'addColLeft', 'addColRight']],
-            ['delete', ['deleteRow', 'deleteCol', 'deleteTable']],
-        ],
-        'air': [
-            ['color', ['color']],
-            ['font', ['bold', 'underline', 'clear']],
-            ['para', ['ul', 'paragraph']],
-            ['table', ['table']],
-            ['insert', ['link', 'picture']]
-        ]
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '\n[{levelname}] {name}:\n{message}\n',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+            'level': 'DEBUG',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        # Provider loggers (SMS/Email mock output)
+        'providers': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'providers.sms': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'providers.email': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'notifications': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
     },
 }
+
+
+# =============================================================================
+# ENVIRONMENT INFO (Development only)
+# =============================================================================
+
+if DEBUG:
+    print(f"[INFO] Environment: {CURRENT_ENV}")
+    print(f"[INFO] Redis: {'Available' if REDIS_AVAILABLE else 'Not available'}")
+    print(f"[INFO] Celery: {'Enabled' if CELERY_ENABLED else 'Disabled'}")

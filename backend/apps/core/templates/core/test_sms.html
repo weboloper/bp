@@ -1,0 +1,165 @@
+{% extends 'core/base_content.html' %}
+{% load static %}
+
+{% block main_content %}
+<main>
+    <div class="container">
+        <h2>SMS Service Test</h2>
+
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <h3>Sistem Bilgileri</h3>
+            <p><strong>Environment:</strong> {{ current_env }}</p>
+
+            <hr style="margin: 15px 0;">
+
+            <h4>Provider Ayarlari</h4>
+            <p><strong>SMS Provider:</strong>
+                {% if sms_provider == 'mock' %}
+                    <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">{{ sms_provider }}</span>
+                    <br><small style="color: #856404;">SMS'ler gonderilmeyecek, sadece log'a yazilacak</small>
+                {% elif sms_provider == 'netgsm' %}
+                    <span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">{{ sms_provider }}</span>
+                    <br><small style="color: #155724;">NetGSM API ile gercek SMS gonderilecek</small>
+                {% elif sms_provider == 'twilio' %}
+                    <span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">{{ sms_provider }}</span>
+                    <br><small style="color: #155724;">Twilio API ile gercek SMS gonderilecek</small>
+                {% else %}
+                    <span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">{{ sms_provider }}</span>
+                    <br><small style="color: #721c24;">Bilinmeyen SMS provider</small>
+                {% endif %}
+            </p>
+
+            <p><strong>Celery:</strong>
+                {% if celery_enabled %}
+                    <span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">Aktif</span>
+                    <br><small style="color: #155724;">Async SMS'ler Celery ile gonderilecek</small>
+                {% else %}
+                    <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">Kapali</span>
+                    <br><small style="color: #856404;">Async SMS'ler sync olarak gonderilecek (fallback)</small>
+                {% endif %}
+            </p>
+
+            {% if sms_provider != 'mock' and provider_config %}
+                <hr style="margin: 15px 0;">
+                <h4>Provider Konfigurasyonu</h4>
+                {% for key, value in provider_config.items %}
+                    <p><strong>{{ key }}:</strong> {{ value|default:"(not set)" }}</p>
+                {% endfor %}
+            {% endif %}
+
+            {% if sms_provider == 'mock' %}
+                <div style="background: #d4edda; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                    <strong>Mock SMS Backend:</strong><br>
+                    <small>SMS'ler gonderilmeyecek, sadece console/log'da gorunecek.</small><br>
+                    <small>Development icin mukemmel - gercek SMS gonderimi yapmaz, ucret odemezsiniz.</small>
+                </div>
+            {% endif %}
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div style="margin-bottom: 15px;">
+                <label for="sms_type"><strong>SMS Tipi:</strong></label>
+                <select id="sms_type" name="sms_type" required style="padding: 8px; width: 100%; max-width: 400px;">
+                    <option value="">Seciniz</option>
+                    <option value="sync">Sync SMS (Aninda gonderilir)</option>
+                    <option value="async">Async SMS (Celery ile queue'ya eklenir)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="recipient_phone"><strong>Alici Telefon:</strong></label>
+                <input type="tel"
+                       id="recipient_phone"
+                       name="recipient_phone"
+                       placeholder="+905551234567"
+                       required
+                       style="padding: 8px; width: 100%; max-width: 400px;">
+                <br>
+                <small style="color: #666;">Format: +905551234567 veya 05551234567</small>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="message"><strong>Mesaj:</strong></label>
+                <textarea id="message"
+                          name="message"
+                          placeholder="SMS mesajinizi yazin..."
+                          required
+                          rows="4"
+                          maxlength="160"
+                          style="padding: 8px; width: 100%; max-width: 400px;"></textarea>
+                <br>
+                <small style="color: #666;">Maks 160 karakter (1 SMS)</small>
+
+                <div style="margin-top: 10px;">
+                    <strong>Ornek mesajlar:</strong>
+                    {% for msg in sample_messages %}
+                        <button type="button"
+                                onclick="document.getElementById('message').value = '{{ msg }}'"
+                                style="display: block; margin: 5px 0; padding: 5px 10px; background: #e9ecef; border: 1px solid #ced4da; border-radius: 3px; cursor: pointer; text-align: left; width: 100%; max-width: 400px;">
+                            {{ msg }}
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    SMS Gonder
+                </button>
+            </div>
+        </form>
+
+        <div style="margin-top: 30px; background: #e7f3ff; padding: 15px; border-radius: 5px;">
+            <h3>SMS Gonderim Modlari</h3>
+
+            <div style="margin-bottom: 15px;">
+                <strong>Sync SMS (sync=True)</strong>
+                <ul>
+                    <li>Aninda gonderilir, response bekler</li>
+                    <li>Kritik SMS'ler icin (OTP, dogrulama kodlari)</li>
+                    <li>Hata olursa exception firlatir</li>
+                </ul>
+            </div>
+
+            <div>
+                <strong>Async SMS (sync=False)</strong>
+                <ul>
+                    <li>Celery aktifse queue'ya eklenir</li>
+                    <li>Celery kapaliysa sync olarak gonderilir (fallback)</li>
+                    <li>Non-kritik SMS'ler icin (bildirimler, hatirlatmalar)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 5px;">
+            <h4>Kod Ornegi:</h4>
+            <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;">
+<code>from notifications.services import send_sms
+
+# Kritik SMS (sync) - OTP, dogrulama
+send_sms(
+    to='+905551234567',
+    message='Dogrulama kodunuz: 123456',
+    sync=True
+)
+
+# Non-kritik SMS (async) - bildirim
+send_sms(
+    to='+905551234567',
+    message='Randevunuz onaylandi.',
+    sync=False
+)</code></pre>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>Linkler</h3>
+            <a href="/" style="margin-right: 10px;">Ana Sayfa</a>
+            <a href="/test-email/" style="margin-right: 10px;">Email Test</a>
+            <a href="/health/" style="margin-right: 10px;">Health Check</a>
+            <a href="/admin/">Admin Panel</a>
+        </div>
+    </div>
+</main>
+{% endblock %}

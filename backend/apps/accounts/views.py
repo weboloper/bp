@@ -9,7 +9,7 @@ from django.utils import timezone
 from accounts.models import User, Profile
 from accounts.utils import validate_alphanumeric_username
 from accounts.forms import UserRegistrationForm, PasswordResetForm, PasswordResetConfirmForm, EmailVerificationResendForm, PasswordSetForm, PasswordChangeForm, EmailChangeForm, ProfileUpdateForm, UsernameChangeForm
-from core.email_service import EmailService
+from notifications.services import send_template_email
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -35,15 +35,16 @@ def register_view(request):
                 
                 # Send verification email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Email Doğrulama - BP Django App',
                         template_name='accounts/emails/email_verification',
                         context={
                             'user': user,
                             'verification_link': verification_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Email Doğrulama - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                     
                     messages.success(request, 'Kayıt başarılı! Email adresinize doğrulama linki gönderildi.')
@@ -171,15 +172,16 @@ def password_reset_request_view(request):
                 
                 # Send password reset email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Şifre Sıfırlama Talebi - BP Django App',
                         template_name='accounts/emails/password_reset',
                         context={
                             'user': user,
                             'reset_link': reset_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Şifre Sıfırlama Talebi - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                     
                     messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
@@ -256,15 +258,16 @@ def password_reset_request_otp_view(request):
                 
                 # Send password reset email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Şifre Sıfırlama Talebi - BP Django App',
                         template_name='accounts/emails/password_reset',
                         context={
                             'user': user,
                             'reset_link': reset_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Şifre Sıfırlama Talebi - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                     
                     messages.success(request, 'Şifre sıfırlama linki email adresinize gönderildi.')
@@ -303,14 +306,15 @@ def email_verification_confirm_view(request, uidb64, token):
             
             # Send welcome email after verification
             try:
-                EmailService.send_smart_email(
+                send_template_email(
+                    to=user.email,
+                    subject='Hoş geldiniz! - BP Django App',
                     template_name='accounts/emails/welcome',
                     context={
                         'user': user,
                         'site_url': settings.FRONTEND_URL,
                     },
-                    subject='Hoş geldiniz! - BP Django App',
-                    recipient_list=[user.email]
+                    sync=False
                 )
             except Exception as e:
                 print(f"Welcome email failed: {e}")
@@ -350,15 +354,16 @@ def email_verification_request_view(request):
                 
                 # Send verification email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Email Doğrulama - BP Django App',
                         template_name='accounts/emails/email_verification',
                         context={
                             'user': user,
                             'verification_link': verification_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Email Doğrulama - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                     
                     messages.success(request, 'Email doğrulama linki gönderildi.')
@@ -468,7 +473,9 @@ def email_change_view(request):
             
             try:
                 # Send confirmation email to NEW email address
-                EmailService.send_critical_email(
+                send_template_email(
+                    to=new_email,
+                    subject='Email Değişikliği Onayı - BP Django App',
                     template_name='accounts/emails/email_change_confirmation',
                     context={
                         'user': request.user,
@@ -477,8 +484,7 @@ def email_change_view(request):
                         'confirmation_link': confirmation_link,
                         'site_url': settings.FRONTEND_URL,
                     },
-                    subject='Email Değişikliği Onayı - BP Django App',
-                    recipient_list=[new_email]
+                    sync=True
                 )
                 
                 messages.success(request, f'Email değişiklik onayı {new_email} adresine gönderildi. Lütfen emailinizi kontrol edin.')
@@ -521,7 +527,9 @@ def email_change_confirm_view(request, uidb64, token, new_email_b64):
         
         # Send notification to OLD email address
         try:
-            EmailService.send_critical_email(
+            send_template_email(
+                to=old_email,
+                subject='Email Adresi Değiştirildi - BP Django App',
                 template_name='accounts/emails/email_change_notification',
                 context={
                     'user': user,
@@ -530,8 +538,7 @@ def email_change_confirm_view(request, uidb64, token, new_email_b64):
                     'change_date': timezone.now(),
                     'site_url': settings.FRONTEND_URL,
                 },
-                subject='Email Adresi Değiştirildi - BP Django App',
-                recipient_list=[old_email]
+                sync=True
             )
         except Exception as e:
             print(f"Email change notification failed: {e}")

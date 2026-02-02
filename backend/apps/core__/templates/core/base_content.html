@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    /* Header/Navbar */
+    .site-header {
+        background: #fff;
+        border-bottom: 1px solid #dee2e6;
+        padding: 1rem 0;
+    }
+
+    .site-header .navbar-brand {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #667eea;
+    }
+
+    .site-header .nav-link {
+        color: #495057;
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+    }
+
+    .site-header .nav-link:hover {
+        color: #667eea;
+    }
+
+    /* Main Layout */
+    .content-wrapper {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+
+    .content-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr 300px;
+        gap: 2rem;
+    }
+
+    /* Left Sidebar */
+    .left-sidebar {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        height: fit-content;
+        position: sticky;
+        top: 2rem;
+    }
+
+    .left-sidebar h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #495057;
+    }
+
+    .left-sidebar .nav-link {
+        color: #6c757d;
+        padding: 0.5rem 0;
+        display: block;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .left-sidebar .nav-link:hover {
+        color: #667eea;
+    }
+
+    .left-sidebar .nav-link.active {
+        color: #667eea;
+        font-weight: 600;
+    }
+
+    /* Main Content */
+    .main-content {
+        background: #fff;
+        min-height: 500px;
+    }
+
+    /* Right Sidebar */
+    .right-sidebar {
+        height: fit-content;
+        position: sticky;
+        top: 2rem;
+    }
+
+    .widget {
+        background: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+
+    .widget h5 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #495057;
+    }
+
+    .widget-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .widget-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 0.9rem;
+    }
+
+    .widget-list li:last-child {
+        border-bottom: none;
+    }
+
+    .widget-list a {
+        color: #6c757d;
+        text-decoration: none;
+    }
+
+    .widget-list a:hover {
+        color: #667eea;
+    }
+
+    /* Footer */
+    .site-footer {
+        background: #343a40;
+        color: #fff;
+        padding: 2rem 0;
+        margin-top: 3rem;
+    }
+
+    .site-footer a {
+        color: #adb5bd;
+        text-decoration: none;
+    }
+
+    .site-footer a:hover {
+        color: #fff;
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .content-layout {
+            grid-template-columns: 200px 1fr;
+        }
+
+        .right-sidebar {
+            display: none;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .content-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .left-sidebar {
+            position: static;
+            margin-bottom: 2rem;
+        }
+
+        .right-sidebar {
+            display: block;
+            position: static;
+        }
+    }
+</style>
+
+<!-- Header/Navbar -->
+<header class="site-header">
+    <div class="container">
+        <nav class="navbar navbar-expand-lg navbar-light">
+            <a class="navbar-brand" href="{% url 'home' %}">
+                {% block site_title %}BP Django{% endblock %}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'home' %}">Ana Sayfa</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'posts:post_list' %}">Blog</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'pages:page_list' %}">Sayfalar</a>
+                    </li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:profile' %}">Profil</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:logout' %}">Çıkış</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:login' %}">Giriş</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'accounts:register' %}">Kayıt Ol</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
+    </div>
+</header>
+
+<!-- Main Content Area -->
+<div class="content-wrapper">
+    <div class="content-layout">
+        <!-- Left Sidebar -->
+        <aside class="left-sidebar">
+            {% block left_sidebar %}
+            <h5>Menü</h5>
+            <nav>
+                <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                    Ana Sayfa
+                </a>
+                <a href="{% url 'posts:post_list' %}" class="nav-link {% if 'posts' in request.path %}active{% endif %}">
+                    Blog
+                </a>
+                <a href="{% url 'pages:page_list' %}" class="nav-link {% if 'pages' in request.path %}active{% endif %}">
+                    Sayfalar
+                </a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'accounts:profile' %}" class="nav-link">
+                        Profilim
+                    </a>
+                {% endif %}
+            </nav>
+            {% endblock %}
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block main_content %}
+            <!-- Sayfa içeriği buraya gelecek -->
+            {% endblock %}
+        </main>
+
+        <!-- Right Sidebar -->
+        <aside class="right-sidebar">
+            {% block right_sidebar %}
+            <!-- Widget 1 -->
+            <div class="widget">
+                <h5>Hakkımızda</h5>
+                <p class="small text-muted mb-0">
+                    Modern Django web uygulaması. Blog, kullanıcı yönetimi ve daha fazlası.
+                </p>
+            </div>
+
+            <!-- Widget 2 -->
+            <div class="widget">
+                <h5>Kategoriler</h5>
+                <ul class="widget-list">
+                    <li><a href="#">Teknoloji</a></li>
+                    <li><a href="#">Yazılım</a></li>
+                    <li><a href="#">Django</a></li>
+                    <li><a href="#">Python</a></li>
+                </ul>
+            </div>
+
+            <!-- Widget 3 -->
+            <div class="widget">
+                <h5>Son Yazılar</h5>
+                <ul class="widget-list">
+                    <li><a href="#">Django ile Web Geliştirme</a></li>
+                    <li><a href="#">Python İpuçları</a></li>
+                    <li><a href="#">Bootstrap 5 Yenilikleri</a></li>
+                </ul>
+            </div>
+            {% endblock %}
+        </aside>
+    </div>
+</div>
+
+<!-- Footer -->
+<footer class="site-footer">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <h5>BP Django</h5>
+                <p class="small">Modern web uygulaması şablonu.</p>
+            </div>
+            <div class="col-md-3">
+                <h6>Linkler</h6>
+                <ul class="list-unstyled small">
+                    <li><a href="{% url 'home' %}">Ana Sayfa</a></li>
+                    <li><a href="{% url 'posts:post_list' %}">Blog</a></li>
+                    <li><a href="{% url 'pages:page_list' %}">Sayfalar</a></li>
+                    <li><a href="#">İletişim</a></li>
+                </ul>
+            </div>
+            <div class="col-md-3">
+                <h6>Hesap</h6>
+                <ul class="list-unstyled small">
+                    {% if user.is_authenticated %}
+                        <li><a href="{% url 'accounts:profile' %}">Profil</a></li>
+                        <li><a href="{% url 'accounts:logout' %}">Çıkış</a></li>
+                    {% else %}
+                        <li><a href="{% url 'accounts:login' %}">Giriş</a></li>
+                        <li><a href="{% url 'accounts:register' %}">Kayıt Ol</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        <hr class="my-3" style="border-color: #495057;">
+        <div class="text-center small">
+            <p class="mb-0">&copy; {% now "Y" %} BP Django. Tüm hakları saklıdır.</p>
+        </div>
+    </div>
+</footer>
+{% endblock %}

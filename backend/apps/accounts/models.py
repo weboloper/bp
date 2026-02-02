@@ -45,11 +45,78 @@ class User(AbstractBaseUser,PermissionsMixin):
     
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
-    
+
+    @property
+    def current_company(self):
+        """
+        Get user's current company.
+        Priority: owned company > employment
+        """
+        # Check if user owns a company
+        owned = self.owned_companies.filter(is_deleted=False, is_active=True).first()
+        if owned:
+            return owned
+
+        # Check if user is employed
+        try:
+            if hasattr(self, 'employment') and not self.employment.is_deleted:
+                return self.employment.company
+        except Exception:
+            pass
+
+        return None
+
+    @property
+    def is_company_owner(self):
+        """Check if user owns a company"""
+        return self.owned_companies.filter(is_deleted=False).exists()
+
+    @property
+    def is_employee(self):
+        """Check if user is an employee at any company"""
+        try:
+            return hasattr(self, 'employment') and not self.employment.is_deleted
+        except Exception:
+            return False
+
+    @property
+    def employee_role(self):
+        """Get employee role if user is employed"""
+        try:
+            if self.is_employee:
+                return self.employment.role
+        except Exception:
+            pass
+        return None
+
+    def has_company_access(self):
+        """Check if user has access to any company"""
+        return self.current_company is not None
+
+    def is_admin_of_company(self, company):
+        """Check if user is admin of specified company (owner or admin employee)"""
+        # Check if owner
+        if self.is_company_owner and self.current_company == company:
+            return True
+
+        # Check if admin employee
+        try:
+            if hasattr(self, 'employment'):
+                employment = self.employment
+                return (
+                    employment.company == company and
+                    employment.role == 'admin' and
+                    not employment.is_deleted
+                )
+        except Exception:
+            pass
+
+        return False
+
     class Meta:
         verbose_name = _('User')
         verbose_name_plural = _('Users')
-    
+
     def __str__(self):
         return self.username
 

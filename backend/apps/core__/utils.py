@@ -12,7 +12,6 @@ from django.utils.text import slugify
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
-from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from PIL import Image
 import hashlib
@@ -84,35 +83,6 @@ class ValidationUtils:
         except:
             return False
     
-    @staticmethod
-    def validate_phone_supported(value):
-        """
-        Validate that the phone number belongs to a supported country.
-        Checks against core.choices.PhoneCodeChoices.
-        """
-        from core.choices import PhoneCodeChoices
-        
-        if not value:
-            return
-            
-        # PhoneCodeChoices values are strings like '+90'
-        # value.country_code is int (e.g. 90)
-        
-        allowed_codes = []
-        for code_str in PhoneCodeChoices.values:
-            try:
-                code_int = int(code_str.replace('+', ''))
-                allowed_codes.append(code_int)
-            except ValueError:
-                continue
-                
-        if value.country_code not in allowed_codes:
-            supported_list = ", ".join(PhoneCodeChoices.values)
-            raise ValidationError(
-                _("Phone number country code is not supported. Supported codes: %(codes)s") % 
-                {'codes': supported_list}
-            )
-
     @staticmethod
     def is_strong_password(password: str) -> Dict[str, Any]:
         """Check password strength"""

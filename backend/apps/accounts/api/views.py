@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django_ratelimit.decorators import ratelimit
-from core.email_service import EmailService
+from notifications.services import send_template_email
 
 from .serializers import (
     CustomTokenObtainPairSerializer,
@@ -63,15 +63,16 @@ class RegisterAPIView(APIView):
                 
                 # Send verification email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Email Doğrulama - BP Django App',
                         template_name='accounts/emails/email_verification',
                         context={
                             'user': user,
                             'verification_link': verification_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Email Doğrulama - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                 except Exception as e:
                     print(f"Email verification email failed: {e}")
@@ -324,15 +325,16 @@ class PasswordResetRequestAPIView(APIView):
                 
                 # Send password reset email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Şifre Sıfırlama Talebi - BP Django App',
                         template_name='accounts/emails/password_reset',
                         context={
                             'user': user,
                             'reset_link': reset_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Şifre Sıfırlama Talebi - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                 except Exception as e:
                     print(f"Password reset email failed: {e}")
@@ -520,7 +522,9 @@ class EmailChangeAPIView(APIView):
                 
                 # Send confirmation email to NEW email address
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=new_email,
+                        subject='Email Değişikliği Onayı - BP Django App',
                         template_name='accounts/emails/email_change_confirmation',
                         context={
                             'user': request.user,
@@ -529,8 +533,7 @@ class EmailChangeAPIView(APIView):
                             'confirmation_link': confirmation_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Email Değişikliği Onayı - BP Django App',
-                        recipient_list=[new_email]
+                        sync=True
                     )
                     
                     return Response(
@@ -595,7 +598,9 @@ class EmailChangeConfirmAPIView(APIView):
             # Send notification to OLD email address
             try:
                 from django.utils import timezone
-                EmailService.send_critical_email(
+                send_template_email(
+                    to=old_email,
+                    subject='Email Adresi Değiştirildi - BP Django App',
                     template_name='accounts/emails/email_change_notification',
                     context={
                         'user': user,
@@ -604,8 +609,7 @@ class EmailChangeConfirmAPIView(APIView):
                         'change_date': timezone.now(),
                         'site_url': settings.FRONTEND_URL,
                     },
-                    subject='Email Adresi Değiştirildi - BP Django App',
-                    recipient_list=[old_email]
+                    sync=True
                 )
             except Exception as e:
                 print(f"Email change notification failed: {e}")
@@ -656,15 +660,16 @@ class EmailVerificationRequestAPIView(APIView):
                 
                 # Send verification email
                 try:
-                    EmailService.send_critical_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Email Doğrulama - BP Django App',
                         template_name='accounts/emails/email_verification',
                         context={
                             'user': user,
                             'verification_link': verification_link,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Email Doğrulama - BP Django App',
-                        recipient_list=[user.email]
+                        sync=True
                     )
                 except Exception as e:
                     print(f"Email verification resend failed: {e}")
@@ -711,16 +716,17 @@ class EmailVerificationConfirmAPIView(APIView):
                 user.is_verified = True
                 user.save()
                 
-                # Send welcome email after verification
+                # Send welcome email after verification (async - non-critical)
                 try:
-                    EmailService.send_smart_email(
+                    send_template_email(
+                        to=user.email,
+                        subject='Hoş geldiniz! - BP Django App',
                         template_name='accounts/emails/welcome',
                         context={
                             'user': user,
                             'site_url': settings.FRONTEND_URL,
                         },
-                        subject='Hoş geldiniz! - BP Django App',
-                        recipient_list=[user.email]
+                        sync=False
                     )
                 except Exception as e:
                     print(f"Welcome email failed: {e}")

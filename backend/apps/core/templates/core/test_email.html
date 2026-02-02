@@ -1,107 +1,176 @@
-{% extends 'base.html' %}
+{% extends 'core/base_content.html' %}
 {% load static %}
 
-{% block content %}
+{% block main_content %}
 <main>
     <div class="container">
-<h2>Email Service Test</h2>
+        <h2>Email Service Test</h2>
 
-<div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-    <h3>Sistem Bilgileri</h3>
-    <p><strong>Environment:</strong> {{ current_env }}</p>
-    <p><strong>Frontend URL:</strong> {{ frontend_url }}</p>
-    <p><strong>Async Email:</strong> {{ use_async_email|yesno:"Açık,Kapalı" }}</p>
-    
-    <hr style="margin: 15px 0;">
-    
-    <h4>📧 Email Backend Konfigürasyonu</h4>
-    <p><strong>Backend:</strong> 
-        {% if 'console' in email_backend %}
-            <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
-            <br><small style="color: #856404;">⚠️ Email'ler console'da görünecek (terminal/logs)</small>
-        {% elif 'smtp' in email_backend %}
-            <span style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
-            <br><small style="color: #0c5460;">✉️ Email'ler SMTP ile gönderilecek</small>
-        {% else %}
-            <span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
-            <br><small style="color: #721c24;">❓ Bilinmeyen email backend</small>
-        {% endif %}
-    </p>
-    
-    {% if 'console' not in email_backend %}
-        <p><strong>Email Host:</strong> {{ email_host }}</p>
-        <p><strong>Email User:</strong> {{ email_host_user }}</p>
-    {% endif %}
-    
-    {% if 'console' in email_backend %}
-        <div style="background: #d4edda; padding: 10px; border-radius: 5px; margin-top: 10px;">
-            <strong>🔍 Console Email Backend:</strong><br>
-            <small>Email'ler gönderilmeyecek, sadece console'da (terminal/logs) görünecek.</small><br>
-            <small>Development için mükemmel - gerçek email gönderimi yapmaz.</small>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <h3>Sistem Bilgileri</h3>
+            <p><strong>Environment:</strong> {{ current_env }}</p>
+            <p><strong>Frontend URL:</strong> {{ frontend_url }}</p>
+
+            <hr style="margin: 15px 0;">
+
+            <h4>Provider Ayarlari</h4>
+            <p><strong>Email Provider:</strong>
+                <span style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{{ email_provider }}</span>
+            </p>
+            <p><strong>SMS Provider:</strong>
+                <span style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{{ sms_provider }}</span>
+            </p>
+            <p><strong>Celery:</strong>
+                {% if celery_enabled %}
+                    <span style="background: #d4edda; padding: 2px 6px; border-radius: 3px;">Aktif</span>
+                    <br><small style="color: #155724;">Async email'ler Celery ile gonderilecek</small>
+                {% else %}
+                    <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">Kapali</span>
+                    <br><small style="color: #856404;">Async email'ler sync olarak gonderilecek (fallback)</small>
+                {% endif %}
+            </p>
+
+            <hr style="margin: 15px 0;">
+
+            <h4>Email Backend Konfigurasyonu</h4>
+            <p><strong>Backend:</strong>
+                {% if 'console' in email_backend %}
+                    <span style="background: #fff3cd; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
+                    <br><small style="color: #856404;">Email'ler console'da gorunecek (terminal/logs)</small>
+                {% elif 'smtp' in email_backend %}
+                    <span style="background: #d1ecf1; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
+                    <br><small style="color: #0c5460;">Email'ler SMTP ile gonderilecek</small>
+                {% else %}
+                    <span style="background: #f8d7da; padding: 2px 6px; border-radius: 3px;">{{ email_backend }}</span>
+                    <br><small style="color: #721c24;">Bilinmeyen email backend</small>
+                {% endif %}
+            </p>
+
+            {% if 'console' not in email_backend %}
+                <p><strong>Email Host:</strong> {{ email_host }}</p>
+                <p><strong>Email User:</strong> {{ email_host_user }}</p>
+            {% endif %}
+
+            {% if 'console' in email_backend %}
+                <div style="background: #d4edda; padding: 10px; border-radius: 5px; margin-top: 10px;">
+                    <strong>Console Email Backend:</strong><br>
+                    <small>Email'ler gonderilmeyecek, sadece console'da (terminal/logs) gorunecek.</small><br>
+                    <small>Development icin mukemmel - gercek email gonderimi yapmaz.</small>
+                </div>
+            {% endif %}
         </div>
-    {% endif %}
-</div>
 
-<form method="post">
-    {% csrf_token %}
-    
-    <div>
-        <label for="email_type">Email Tipi:</label>
-        <select id="email_type" name="email_type" required>
-            <option value="">Seçiniz</option>
-            <option value="smart">Smart Email</option>
-            <option value="critical">Critical Email</option>
-        </select>
+        <form method="post">
+            {% csrf_token %}
+
+            <div style="margin-bottom: 15px;">
+                <label for="email_type"><strong>Email Tipi:</strong></label>
+                <select id="email_type" name="email_type" required style="padding: 8px; width: 100%; max-width: 400px;">
+                    <option value="">Seciniz</option>
+                    <option value="sync">Sync Email (Aninda gonderilir)</option>
+                    <option value="async">Async Email (Celery ile queue'ya eklenir)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="recipient_email"><strong>Alici Email:</strong></label>
+                <input type="email"
+                       id="recipient_email"
+                       name="recipient_email"
+                       placeholder="test@example.com"
+                       required
+                       style="padding: 8px; width: 100%; max-width: 400px;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label for="template_name"><strong>Template:</strong></label>
+                <select id="template_name" name="template_name" required style="padding: 8px; width: 100%; max-width: 400px;">
+                    <option value="">Template seciniz</option>
+                    {% for template in available_templates %}
+                        <option value="{{ template }}">{{ template }}</option>
+                    {% endfor %}
+                </select>
+                <br>
+                <small>Veya manuel template path giriniz:</small>
+                <input type="text"
+                       name="template_name_manual"
+                       placeholder="app/emails/custom_template"
+                       style="padding: 8px; width: 100%; max-width: 400px; margin-top: 5px;">
+            </div>
+
+            <div>
+                <button type="submit" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Email Gonder
+                </button>
+            </div>
+        </form>
+
+        <div style="margin-top: 30px; background: #e7f3ff; padding: 15px; border-radius: 5px;">
+            <h3>Email Gonderim Modlari</h3>
+
+            <div style="margin-bottom: 15px;">
+                <strong>Sync Email (sync=True)</strong>
+                <ul>
+                    <li>Aninda gonderilir, response bekler</li>
+                    <li>Kritik email'ler icin (verification, password reset)</li>
+                    <li>Hata olursa exception firlatir</li>
+                </ul>
+            </div>
+
+            <div>
+                <strong>Async Email (sync=False)</strong>
+                <ul>
+                    <li>Celery aktifse queue'ya eklenir</li>
+                    <li>Celery kapaliysa sync olarak gonderilir (fallback)</li>
+                    <li>Non-kritik email'ler icin (welcome, notifications)</li>
+                </ul>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; background: #fff3cd; padding: 15px; border-radius: 5px;">
+            <h4>Test Context Data:</h4>
+            <ul>
+                <li><code>user.username</code>: test_user</li>
+                <li><code>user.email</code>: girilen email</li>
+                <li><code>user.first_name</code>: Test</li>
+                <li><code>site_url</code>: {{ frontend_url }}</li>
+                <li><code>verification_link</code>: {{ frontend_url }}/test-link/</li>
+                <li><code>reset_link</code>: {{ frontend_url }}/test-reset/</li>
+                <li><code>test_data</code>: Bu bir test emailidir</li>
+            </ul>
+        </div>
+
+        <div style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 5px;">
+            <h4>Kod Ornegi:</h4>
+            <pre style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; overflow-x: auto;">
+<code>from notifications.services import send_template_email
+
+# Kritik email (sync)
+send_template_email(
+    to='user@example.com',
+    subject='Email Dogrulama',
+    template_name='accounts/emails/email_verification',
+    context={'user': user, 'verification_link': link},
+    sync=True
+)
+
+# Non-kritik email (async)
+send_template_email(
+    to='user@example.com',
+    subject='Hos geldiniz!',
+    template_name='accounts/emails/welcome',
+    context={'user': user},
+    sync=False
+)</code></pre>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>Linkler</h3>
+            <a href="/" style="margin-right: 10px;">Ana Sayfa</a>
+            <a href="/test-sms/" style="margin-right: 10px;">SMS Test</a>
+            <a href="/health/" style="margin-right: 10px;">Health Check</a>
+            <a href="/admin/">Admin Panel</a>
+        </div>
     </div>
-
-    <div>
-        <label for="recipient_email">Alıcı Email:</label>
-        <input type="email" 
-               id="recipient_email" 
-               name="recipient_email" 
-               placeholder="test@example.com"
-               required>
-    </div>
-
-    <div>
-        <label for="template_name">Template:</label>
-        <select id="template_name" name="template_name" required>
-            <option value="">Template seçiniz</option>
-            {% for template in available_templates %}
-                <option value="{{ template }}">{{ template }}</option>
-            {% endfor %}
-        </select>
-        <small>Veya manuel template path giriniz:</small>
-        <input type="text" 
-               name="template_name_manual" 
-               placeholder="core/emails/test"
-               onchange="if(this.value) document.getElementById('template_name').value = this.value">
-    </div>
-
-    <div>
-        <button type="submit">Email Gönder</button>
-    </div>
-</form>
-
-<div style="margin-top: 30px; background: #fff3cd; padding: 15px; border-radius: 5px;">
-    <h3>Test Email Açıklaması</h3>
-    <p><strong>Smart Email:</strong> Settings'e göre sync veya async gönderilir.</p>
-    <p><strong>Critical Email:</strong> Her zaman sync (senkron) gönderilir.</p>
-    
-    <h4>Test Context Data:</h4>
-    <ul>
-        <li><code>user.username</code>: test_user</li>
-        <li><code>user.email</code>: girilen email</li>
-        <li><code>user.first_name</code>: Test</li>
-        <li><code>site_url</code>: {{ frontend_url }}</li>
-        <li><code>test_data</code>: Bu bir test emailidir</li>
-    </ul>
-</div>
-
-<div style="margin-top: 20px;">
-    <h3>🔗 Linkler</h3>
-    <a href="/" style="margin-right: 10px;">← Ana Sayfa</a>
-    <a href="/health/" style="margin-right: 10px;">Health Check</a>
-    <a href="/admin/">Admin Panel</a>
-</div>
+</main>
 {% endblock %}
